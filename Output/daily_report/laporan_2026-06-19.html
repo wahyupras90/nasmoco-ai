@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Performa Juni 2026 — Nasmoco Tegal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;color:#1a2332;font-size:13px}
+.hdr{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);color:#fff;padding:14px;text-align:center}
+.hdr h1{font-size:17px;font-weight:800}.hdr p{font-size:11px;opacity:.8;margin-top:3px}
+.tabs{position:sticky;top:0;z-index:99;background:#1e3a5f;display:flex;border-bottom:1px solid #2d4a6e}
+.tab{flex:1;padding:12px 6px;text-align:center;font-size:12px;font-weight:700;border:none;cursor:pointer;color:rgba(255,255,255,.55);background:transparent;border-bottom:3px solid transparent;transition:.15s}
+.tab.on{color:#fff;border-bottom:3px solid #60a5fa;background:rgba(255,255,255,.05)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px;max-width:540px;margin:0 auto}
+.kpi{background:#fff;border-radius:10px;padding:11px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kl{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.kv{font-size:17px;font-weight:800;margin:3px 0 2px}.ks{font-size:10px;color:#94a3b8}
+.rsec{padding:0 12px 4px;max-width:540px;margin:0 auto}
+.sec-t{font-size:11px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;padding:10px 0 6px;display:flex;align-items:center;gap:6px}
+.rs-box{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:10px}
+.rs-row{display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid #f1f5f9;gap:10px}
+.rs-row:last-child{border-bottom:none}.rs-row:hover{background:#f8faff}
+.rs-left{display:flex;flex-direction:column;align-items:center;min-width:38px}
+.rs-rank{font-size:16px}.rs-sa{font-size:13px;font-weight:800;color:#1e3a5f}
+.rs-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1}
+.rs-metric{text-align:center}
+.rs-lbl{font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.2px}
+.rs-val{font-size:12px;font-weight:800;color:#1e293b;margin:2px 0}
+.rs-pct{font-size:10px;font-weight:700;margin-top:2px}
+.wrap{padding:0 12px 16px;max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+.ch{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;background:#fafbfc}
+.cn{font-size:17px;font-weight:800;color:#1e3a5f}
+.cbdg{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:4px}
+.cr{font-size:15px;font-weight:800;text-align:right}
+.cm{padding:12px 14px}.cs{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.mr{margin-bottom:10px}.ml{font-size:11px;color:#475569;font-weight:600;margin-bottom:3px}
+.mn{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
+.ma{font-size:14px;font-weight:800;color:#1e293b}.mt{font-size:11px;color:#94a3b8}
+.bdg{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px}
+.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
+.cb{background:#dbeafe;color:#1d4ed8}.co{background:#ffedd5;color:#c2410c}
+.total .ch{background:#eff6ff}
+.ytm-wrap{padding:0 12px 16px;max-width:540px;margin:0 auto}
+.tbl-box{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow-x:auto;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}
+thead th{background:#1e3a5f;color:#fff;padding:9px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:center}
+thead th.thl{text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:center}
+td.tl{text-align:left;font-weight:700;color:#1e3a5f;background:#f8fafc}
+tr:hover td{background:#f0f7ff}tr:hover td.tl{background:#dbeafe}
+tr.ttr td{background:#1e3a5f!important;color:#fff!important;font-weight:800}
+tr.ttr td.tl{background:#162d4a!important;color:#fff!important}
+.hidden{display:none!important}
+.footer{text-align:center;padding:12px;font-size:10px;color:#94a3b8}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>📊 PERFORMA NASMOCO TEGAL</h1>
+  <p>Juni 2026</p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="show(1)">📅 Bulan Ini</button>
+  <button class="tab"    onclick="show(2)">📈 YTM</button>
+</div>
+
+<!-- TAB 1: BULAN INI -->
+<div id="t1">
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kl">Revenue</div>
+      <div class="kv" style="color:#7c3aed">Rp 1.90M</div>
+      <div class="ks">80% target</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">CPUS</div>
+      <div class="kv" style="color:#1d4ed8">960</div>
+      <div class="ks">68% target</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Rev/CPUS</div>
+      <div class="kv" style="color:#059669">Rp 1.9jt</div>
+      <div class="ks">Target Rp 1.7jt</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">WIP</div>
+      <div class="kv" style="color:#ea580c">272</div>
+      <div class="ks">Belum diinvoice</div>
+    </div>
+  </div>
+
+  <div class="rsec">
+    <div class="sec-t">⚡ Head-to-Head SA</div>
+    <div class="rs-box">
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">🥇</span>
+            <span class="rs-sa">AGN</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 317.2jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:97%;height:100%;background:#22c55e;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#22c55e">97%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">141</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">73%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 2.2jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">35</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">🥈</span>
+            <span class="rs-sa">SAID</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 314.9jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:96%;height:100%;background:#22c55e;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#22c55e">96%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">124</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:64%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#ef4444">64%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 2.5jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">36</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">🥉</span>
+            <span class="rs-sa">ZKY</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 238.2jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">73%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">140</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">73%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 1.7jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">16</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">4️⃣</span>
+            <span class="rs-sa">IND</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 237.0jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:72%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">72%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">111</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:58%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#ef4444">58%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 2.1jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">67</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">5️⃣</span>
+            <span class="rs-sa">NRK</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 232.3jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:71%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">71%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">128</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:66%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#ef4444">66%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 1.8jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">26</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">6️⃣</span>
+            <span class="rs-sa">ARIS</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 230.3jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:70%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">70%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">104</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:54%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#ef4444">54%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 2.2jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">40</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">7️⃣</span>
+            <span class="rs-sa">BDR</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 225.7jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:69%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#ef4444">69%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">135</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:70%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">70%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 1.7jt</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">34</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div>
+        <div class="rs-row">
+          <div class="rs-left">
+            <span class="rs-rank">8️⃣</span>
+            <span class="rs-sa">KHA</span>
+          </div>
+          <div class="rs-metrics">
+            <div class="rs-metric">
+              <div class="rs-lbl">Revenue</div>
+              <div class="rs-val">Rp 64.0jt</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:82%;height:100%;background:#eab308;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#eab308">82%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">CPUS</div>
+              <div class="rs-val">77</div>
+              <div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div>
+              <div class="rs-pct" style="color:#22c55e">107%</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">Rev/CPUS</div>
+              <div class="rs-val">Rp 831,263</div>
+              <div class="rs-pct" style="color:#64748b">per unit</div>
+            </div>
+            <div class="rs-metric">
+              <div class="rs-lbl">WIP</div>
+              <div class="rs-val" style="color:#ea580c">18</div>
+              <div class="rs-pct" style="color:#94a3b8">WO</div>
+            </div>
+          </div>
+        </div></div>
+  </div>
+
+  <div class="rsec"><div class="sec-t">📋 Detail per SA</div></div>
+  <div class="wrap">
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #22c55e">
+            <div>
+              <span class="cn">AGN</span>
+              <span class="cbdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">🟢 On Track</span>
+            </div>
+            <div class="cr">Rp 317.2jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">148</span><span class="mt">/ 202</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">73%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 317.2jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">97%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:97%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 177.5jt</span><span class="mt">/ Rp 195.3jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 73.1jt</span><span class="mt">/ Rp 80.4jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">141</span><span class="mt">/ 192</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">73%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 66.6jt</span><span class="mt">/ Rp 73.2jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 2.2jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">132%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 38 WO</span>
+              <span class="chip co">WIP: 35 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #22c55e">
+            <div>
+              <span class="cn">SAID</span>
+              <span class="cbdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">🟢 On Track</span>
+            </div>
+            <div class="cr">Rp 314.9jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">127</span><span class="mt">/ 202</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">63%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:63%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 314.9jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">96%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:96%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 199.0jt</span><span class="mt">/ Rp 218.9jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 61.0jt</span><span class="mt">/ Rp 67.1jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">124</span><span class="mt">/ 192</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">64%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:64%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 54.9jt</span><span class="mt">/ Rp 60.4jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 2.5jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">149%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 12 WO</span>
+              <span class="chip co">WIP: 36 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #eab308">
+            <div>
+              <span class="cn">ZKY</span>
+              <span class="cbdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">🟡 Monitor</span>
+            </div>
+            <div class="cr">Rp 238.2jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">145</span><span class="mt">/ 202</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">72%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:72%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 238.2jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">73%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 101.5jt</span><span class="mt">/ Rp 111.6jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 86.8jt</span><span class="mt">/ Rp 95.5jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">140</span><span class="mt">/ 192</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">73%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 49.8jt</span><span class="mt">/ Rp 54.8jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 1.7jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">100%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 53 WO</span>
+              <span class="chip co">WIP: 16 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #eab308">
+            <div>
+              <span class="cn">IND</span>
+              <span class="cbdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">🟡 Monitor</span>
+            </div>
+            <div class="cr">Rp 237.0jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">120</span><span class="mt">/ 202</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">59%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:59%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 237.0jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">72%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:72%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 97.9jt</span><span class="mt">/ Rp 107.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 57.7jt</span><span class="mt">/ Rp 63.5jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">111</span><span class="mt">/ 192</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">58%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:58%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 81.4jt</span><span class="mt">/ Rp 89.5jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 2.1jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">125%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 70 WO</span>
+              <span class="chip co">WIP: 67 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #eab308">
+            <div>
+              <span class="cn">NRK</span>
+              <span class="cbdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">🟡 Monitor</span>
+            </div>
+            <div class="cr">Rp 232.3jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">135</span><span class="mt">/ 202</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">67%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:67%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 232.3jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">71%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:71%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 110.9jt</span><span class="mt">/ Rp 122.0jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 70.7jt</span><span class="mt">/ Rp 77.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">128</span><span class="mt">/ 192</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">66%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:66%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 50.7jt</span><span class="mt">/ Rp 55.8jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 1.8jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">107%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 14 WO</span>
+              <span class="chip co">WIP: 26 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #eab308">
+            <div>
+              <span class="cn">ARIS</span>
+              <span class="cbdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">🟡 Monitor</span>
+            </div>
+            <div class="cr">Rp 230.3jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">107</span><span class="mt">/ 202</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">53%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:53%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 230.3jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">70%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:70%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 77.6jt</span><span class="mt">/ Rp 85.4jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 50.6jt</span><span class="mt">/ Rp 55.6jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">104</span><span class="mt">/ 192</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">54%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:54%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 102.2jt</span><span class="mt">/ Rp 112.4jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 2.2jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">130%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 21 WO</span>
+              <span class="chip co">WIP: 40 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #ef4444">
+            <div>
+              <span class="cn">BDR</span>
+              <span class="cbdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">🔴 Perhatian</span>
+            </div>
+            <div class="cr">Rp 225.7jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">147</span><span class="mt">/ 202</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">73%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:73%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 225.7jt</span><span class="mt">/ Rp 327.9jt</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">69%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:69%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 94.5jt</span><span class="mt">/ Rp 104.0jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 70.1jt</span><span class="mt">/ Rp 77.1jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">135</span><span class="mt">/ 192</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">70%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:70%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 61.0jt</span><span class="mt">/ Rp 67.2jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 1.7jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">98%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:98%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 24 WO</span>
+              <span class="chip co">WIP: 34 WO</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="border-left:4px solid #eab308">
+            <div>
+              <span class="cn">KHA</span>
+              <span class="cbdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">🟡 Monitor</span>
+            </div>
+            <div class="cr">Rp 64.0jt</div>
+          </div>
+          <div class="cm">
+            <div class="cs">📋 Entry & Revenue</div>
+            <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">86</span><span class="mt">/ 76</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">113%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 64.0jt</span><span class="mt">/ Rp 78.5jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">82%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:82%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 35.9jt</span><span class="mt">/ Rp 39.4jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 21.7jt</span><span class="mt">/ Rp 23.9jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+            <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">77</span><span class="mt">/ 72</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">107%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Upselling (ADT+OTH+Sublet)</div>
+    <div><div class="mn"><span class="ma">Rp 6.4jt</span><span class="mt">/ Rp 7.1jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+            <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 831,263</span><span class="mt">/ Rp 1.1jt</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">76%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:76%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+            <div class="chips">
+              <span class="chip cb">TCARE: 16 WO</span>
+              <span class="chip co">WIP: 18 WO</span>
+            </div>
+          </div>
+        </div>
+    <div class="card total">
+      <div class="ch" style="border-left:4px solid #1d4ed8;background:#eff6ff">
+        <div><span class="cn" style="color:#1d4ed8">📊 TOTAL SA</span></div>
+        <div class="cr" style="color:#1d4ed8">Rp 1.86M</div>
+      </div>
+      <div class="cm">
+        <div class="cs">📋 Entry & Revenue</div>
+        <div class="mr"><div class="ml">Unit Entry</div>
+    <div><div class="mn"><span class="ma">1,015</span><span class="mt">/ 1,490</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">68%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:68%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+        <div class="mr"><div class="ml">Revenue</div>
+    <div><div class="mn"><span class="ma">Rp 1.86M</span><span class="mt">/ Rp 2.37M</span><span class="bdg" style="background:#eab30822;color:#eab308;border:1px solid #eab30840">78%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:78%;height:100%;background:#eab308;border-radius:3px"></div></div></div></div>
+        <div class="mr"><div class="ml">TGP Sales</div>
+    <div><div class="mn"><span class="ma">Rp 894.8jt</span><span class="mt">/ Rp 984.2jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+        <div class="mr"><div class="ml">Labor Sales</div>
+    <div><div class="mn"><span class="ma">Rp 491.7jt</span><span class="mt">/ Rp 540.8jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+        <div class="cs" style="margin-top:10px">🎯 CPUS & Upselling</div>
+        <div class="mr"><div class="ml">CPUS</div>
+    <div><div class="mn"><span class="ma">960</span><span class="mt">/ 1,420</span><span class="bdg" style="background:#ef444422;color:#ef4444;border:1px solid #ef444440">68%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:68%;height:100%;background:#ef4444;border-radius:3px"></div></div></div></div>
+        <div class="mr"><div class="ml">Upselling</div>
+    <div><div class="mn"><span class="ma">Rp 473.0jt</span><span class="mt">/ Rp 520.3jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">91%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:91%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+        <div class="mr"><div class="ml">Rev/CPUS</div>
+    <div><div class="mn"><span class="ma">Rp 1.9jt</span><span class="mt">/ Rp 1.7jt</span><span class="bdg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e40">116%</span></div>
+    <div style="background:#e2e8f0;border-radius:3px;height:6px;overflow:hidden"><div style="width:100%;height:100%;background:#22c55e;border-radius:3px"></div></div></div></div>
+        <div class="chips">
+          <span class="chip cb">TCARE: 248 WO</span>
+          <span class="chip co">WIP: 272 WO</span>
+        </div>
+      </div>
+    </div></div>
+</div>
+
+<!-- TAB 2: YTM -->
+<div id="t2" class="hidden">
+  <div class="ytm-wrap">
+    <div class="kpis" style="padding:12px 0">
+      <div class="kpi">
+        <div class="kl">Revenue YTM</div>
+        <div class="kv" style="color:#7c3aed">Rp 15.06M</div>
+        <div class="ks">6 bulan</div>
+      </div>
+      <div class="kpi">
+        <div class="kl">CPUS YTM</div>
+        <div class="kv" style="color:#1d4ed8">8,348</div>
+        <div class="ks">WO: 9,074</div>
+      </div>
+      <div class="kpi">
+        <div class="kl">Rev/CPUS YTM</div>
+        <div class="kv" style="color:#059669">Rp 1.8jt</div>
+        <div class="ks">rata-rata</div>
+      </div>
+      <div class="kpi">
+        <div class="kl">Upselling YTM</div>
+        <div class="kv" style="color:#ea580c">Rp 4.05M</div>
+        <div class="ks">Rp 484,600 /CPUS</div>
+      </div>
+    </div>
+
+    <div class="sec-t" style="padding:4px 0 8px;font-size:11px;font-weight:800;
+         color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px">📅 Rekap Bulanan</div>
+    <div class="tbl-box"><table>
+      <thead><tr>
+        <th class="thl">Bulan</th><th>WO</th><th>Revenue</th>
+        <th>Jasa</th><th>TGP</th><th>ADT</th><th>Sublet</th>
+      </tr></thead>
+      <tbody><tr><td class="tl">2026-01</td><td>1,659</td><td>Rp 2.57M</td><td>Rp 699.1jt</td><td>Rp 1.13M</td><td>Rp 176.1jt</td><td>Rp 550.8jt</td></tr><tr><td class="tl">2026-02</td><td>1,586</td><td>Rp 2.56M</td><td>Rp 705.6jt</td><td>Rp 1.10M</td><td>Rp 162.6jt</td><td>Rp 571.5jt</td></tr><tr><td class="tl">2026-03</td><td>1,632</td><td>Rp 2.84M</td><td>Rp 775.8jt</td><td>Rp 1.33M</td><td>Rp 140.0jt</td><td>Rp 568.1jt</td></tr><tr><td class="tl">2026-04</td><td>1,600</td><td>Rp 2.74M</td><td>Rp 714.3jt</td><td>Rp 1.31M</td><td>Rp 130.8jt</td><td>Rp 540.9jt</td></tr><tr><td class="tl">2026-05</td><td>1,584</td><td>Rp 2.63M</td><td>Rp 715.4jt</td><td>Rp 1.28M</td><td>Rp 121.3jt</td><td>Rp 487.5jt</td></tr><tr><td class="tl">2026-06</td><td>1,015</td><td>Rp 1.90M</td><td>Rp 491.7jt</td><td>Rp 932.6jt</td><td>Rp 71.8jt</td><td>Rp 387.3jt</td></tr></tbody>
+    </table></div>
+
+    <div class="sec-t" style="padding:4px 0 8px;font-size:11px;font-weight:800;
+         color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px">👤 Rekap SA YTM</div>
+    <div class="tbl-box"><table>
+      <thead><tr>
+        <th class="thl">SA</th><th>WO</th><th>CPUS</th>
+        <th>Revenue</th><th>Rev/CPUS</th><th>Upselling</th>
+      </tr></thead>
+      <tbody><tr><td class="tl">NRK</td><td>1,200</td><td>1,122</td><td>Rp 2.36M</td><td>Rp 2.1jt</td><td>Rp 474.8jt</td></tr><tr><td class="tl">SAID</td><td>1,158</td><td>1,099</td><td>Rp 2.16M</td><td>Rp 2.0jt</td><td>Rp 502.5jt</td></tr><tr><td class="tl">BDR</td><td>1,362</td><td>1,247</td><td>Rp 2.11M</td><td>Rp 1.7jt</td><td>Rp 649.9jt</td></tr><tr><td class="tl">IND</td><td>1,145</td><td>1,081</td><td>Rp 2.10M</td><td>Rp 1.9jt</td><td>Rp 669.7jt</td></tr><tr><td class="tl">ARIS</td><td>1,082</td><td>1,012</td><td>Rp 2.06M</td><td>Rp 2.0jt</td><td>Rp 639.4jt</td></tr><tr><td class="tl">AGN</td><td>1,252</td><td>1,182</td><td>Rp 1.95M</td><td>Rp 1.7jt</td><td>Rp 599.1jt</td></tr><tr><td class="tl">ZKY</td><td>1,272</td><td>1,042</td><td>Rp 1.71M</td><td>Rp 1.6jt</td><td>Rp 455.0jt</td></tr><tr><td class="tl">KHA</td><td>603</td><td>563</td><td>Rp 602.0jt</td><td>Rp 1.1jt</td><td>Rp 55.0jt</td></tr><tr class="ttr"><td class="tl">TOTAL</td><td>9,074</td><td>8,348</td><td>Rp 15.06M</td><td>Rp 1.8jt</td><td>Rp 4.05M</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="footer">Nasmoco Tegal &nbsp;·&nbsp; AI Agent Report &nbsp;·&nbsp; 19/06/2026 19:38</div>
+
+<script>
+function show(n){
+  document.getElementById('t1').classList.toggle('hidden', n !== 1);
+  document.getElementById('t2').classList.toggle('hidden', n !== 2);
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('on', i === n-1);
+  });
+}
+</script>
+</body>
+</html>
