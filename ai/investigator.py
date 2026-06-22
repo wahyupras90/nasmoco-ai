@@ -107,11 +107,14 @@ Setelah melihat data:
   dan tulis 1 SQL query
 - Kalau sudah cukup, tulis KESIMPULAN
 
-Jika user meminta list, daftar, atau data sederhana:
+Jika user meminta list, daftar, tampilkan, show, export:
 - Buat 1 query langsung
-- Tampilkan data saja
-- JANGAN buat analisa atau kesimpulan otomatis
-- Tunggu instruksi user sebelum analisa
+- JANGAN tulis analisa, temuan, atau KESIMPULAN
+- JANGAN tulis breakdown atau statistik
+- Tampilkan data saja, tunggu instruksi user
+
+Gunakan KESIMPULAN HANYA jika user eksplisit meminta:
+analisa, kenapa, penyebab, evaluasi, rekomendasi
 
 Jika data yang diminta ada di lebih dari satu tabel:
 Langsung gunakan JOIN dalam 1 query.
@@ -184,7 +187,14 @@ def run(pertanyaan: str, debug: bool = False):
         if debug:
             print(f"[Turn {turn}] RESPON CLAUDE {elapsed:.1f} detik")
 
-        print(f"\nCLAUDE:\n{response}\n")
+        # Sembunyikan SQL dari tampilan user (kecuali debug mode)
+        if debug:
+            print(f"\nCLAUDE:\n{response}\n")
+        else:
+            response_display = re.sub(
+                r'```sql[\s\S]+?```', '[SQL disiapkan]', response, flags=re.IGNORECASE
+            ).strip()
+            print(f"\nCLAUDE:\n{response_display}\n")
 
         # ── Cek apakah ada SQL ──
         if has_sql(response):
@@ -198,8 +208,8 @@ def run(pertanyaan: str, debug: bool = False):
                 # ── KONFIRMASI USER SEBELUM EXECUTE ──
                 print("─" * 40)
                 konfirmasi = input(
-                    "Execute? (ya/skip/cukup) "
-                    "atau tulis arahan langsung: "
+                    "Jalankan query? (ya/tidak/cukup) "
+                    "atau tulis arahan: "
                 ).strip()
                 print("─" * 40)
 

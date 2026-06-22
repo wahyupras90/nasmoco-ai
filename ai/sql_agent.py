@@ -135,7 +135,9 @@ def validate_sql(sql: str, pertanyaan: str) -> str | None:
     ])
     has_tcare_tables = (bool(re.search(r'\bRS\b', sql_upper)) or
                         "UNITMASUK" in sql_upper or
-                        "REKAPBULANAN" in sql_upper)
+                        "REKAPBULANAN" in sql_upper or
+                        "UNIT_TCARE" in sql_upper or
+                        "TCARE_UNIT" in sql_upper)
     if is_tcare and not has_tcare_tables:
         print("⚠ WARNING: pertanyaan TCARE tapi tidak ada tabel yang relevan.")
 
@@ -267,8 +269,19 @@ def export_excel(df: pd.DataFrame,
 # BUILD PROMPTS
 # ════════════════════════════════════════
 
+TCARE_KEYWORDS = ['tcare', 'batas_tcare', 'sbe terakhir',
+                  'habis tcare', 'expired tcare', 'sisa tcare']
+
 def build_sql_prompt(pertanyaan: str) -> str:
-    return f"""{SQL_PROMPT}
+    tcare_hint = ""
+    if any(k in pertanyaan.lower() for k in TCARE_KEYWORDS):
+        tcare_hint = (
+            "\n\u26a0 TCARE QUERY: WAJIB gunakan FROM unit_tcare\n"
+            "JANGAN buat CTE dari unitmasuk untuk SBE/SA terakhir.\n"
+            "Contoh: SELECT no_rangka, sa_terakhir, last_sbe_km "
+            "FROM unit_tcare WHERE ...\n"
+        )
+    return f"""{SQL_PROMPT}{tcare_hint}
 
 Pertanyaan user:
 {pertanyaan}
