@@ -300,3 +300,11 @@ FROM unit_tcare
 WHERE strftime('%Y-%m', batas_tcare) = '2026-06'
   AND (last_sbe_km IS NULL OR last_sbe_km <= 50000)
 ORDER BY batas_tcare;
+
+List pending SBE (WO yang belum dibuat):
+SELECT no_rangka, customer, sa_terakhir,
+  next_sbe_expected AS wo_belum_dibuat,
+  flag_tgl_kunjungan, flag_wo_type
+FROM tcare_unit
+WHERE flag_pending_sbe = 1
+ORDER BY flag_tgl_kunjungan DESC;

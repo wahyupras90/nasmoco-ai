@@ -113,4 +113,22 @@ def run_all():
 
 
 if __name__ == '__main__':
-    run_all()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--daily',   action='store_true',
+                        help='Hanya ETL harian (unitmasuk, parts, dll)')
+    parser.add_argument('--monthly', action='store_true',
+                        help='Hanya ETL bulanan (rs, tcare_unit)')
+    args = parser.parse_args()
+
+    if args.daily:
+        print("\n▶ Mode: HARIAN")
+        # Hanya ETL_update_alamat (unitmasuk, rekapbulanan, daily_kpi, bufferparts)
+        from ETL_update_alamat import run as run_daily
+        run_daily()
+    elif args.monthly:
+        print("\n▶ Mode: BULANAN")
+        run_rs()
+        run_tcare_unit()
+    else:
+        run_all()

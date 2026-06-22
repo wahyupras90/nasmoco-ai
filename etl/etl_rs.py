@@ -115,8 +115,8 @@ def load_rs_tegal(folder: str) -> pd.DataFrame:
 # ════════════════════════════════════════
 
 def load_tcare_nasional() -> pd.DataFrame:
-    """Baca semua file TCARE Nasional → tgl_do valid (Tgl DEC)."""
-    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)
+    """Baca 2 file TCARE Nasional terbaru → tgl_do valid (Tgl DEC)."""
+    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
     dfs = []
     for f in files:
         try:
@@ -150,8 +150,8 @@ def load_tcare_nasional() -> pd.DataFrame:
 # ════════════════════════════════════════
 
 def load_mapping_cust() -> pd.DataFrame:
-    """Baca semua file Mapping Cust → BERKAH units."""
-    files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)
+    """Baca 2 file Mapping Cust terbaru → BERKAH units."""
+    files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
     dfs = []
     for f in files:
         try:

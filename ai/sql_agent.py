@@ -26,6 +26,9 @@ SYSTEM_PROMPT = Path("prompts/system_prompt.txt").read_text(encoding="utf-8")
 # ROUTING KEYWORDS
 # ════════════════════════════════════════
 
+# Hasil query terakhir — untuk referensi query berikutnya
+_last_result: pd.DataFrame = pd.DataFrame()
+
 ANALYSIS_KEYWORDS = [
     "analisa", "analysis", "kenapa", "mengapa",
     "penyebab", "root cause", "insight",
@@ -38,6 +41,15 @@ EXCEL_KEYWORDS = [
     "simpan ke excel", "download excel", "ke excel",
     "export", "unduh excel"
 ]
+
+SAWA_KEYWORDS = [
+    "extended warranty", "sawa",
+    "download warranty", "cek warranty",
+    "warranty sawa"
+]
+
+def need_sawa(text: str) -> bool:
+    return any(w in text.lower() for w in SAWA_KEYWORDS)
 
 OUTLET_KEYWORDS = [
     "outlet", "dealer", "nasmoco",
@@ -195,6 +207,21 @@ def format_hasil(df: pd.DataFrame) -> str:
         return "Tidak ada data"
 
     df = df.copy()
+
+    # Tampilkan vertikal kalau hanya 1 baris
+    if len(df) == 1:
+        row = df.iloc[0]
+        lines = []
+        max_col_len = max(len(str(c)) for c in df.columns)
+        for col in df.columns:
+            val = row[col]
+            if pd.isna(val):
+                val = "-"
+            elif pd.api.types.is_numeric_dtype(df[col]):
+                is_pct = any(k in col.lower() for k in PCT_KEYWORDS)
+                val = f"{val:,.1f}" if is_pct else f"{val:,.0f}"
+            lines.append(f"{str(col):<{max_col_len}} : {val}")
+        return "\n".join(lines)
 
     # Coba auto pivot kalau ada 3 kolom dengan pola dimensi × kategori × nilai
     pivot_info = detect_pivot(df)
@@ -358,6 +385,10 @@ def run(pertanyaan: str, debug: bool = False):
         print("\nTidak ada data.\n")
         return
 
+    # Simpan hasil terakhir untuk referensi berikutnya
+    global _last_result
+    _last_result = hasil.copy()
+
     hasil_str = format_hasil(hasil)
     if debug:
         print("HASIL:")
@@ -371,7 +402,28 @@ def run(pertanyaan: str, debug: bool = False):
         except Exception as ex:
             print(f"⚠ Gagal export: {ex}\n")
 
-    # 5. Analisa
+    # 5. Extended Warranty (SAWA)
+    if need_sawa(pertanyaan):
+        try:
+            from tools.extended_warranty import run as run_sawa
+            # Coba dari hasil query sekarang
+            if 'no_rangka' in hasil.columns:
+                no_rangka_list = hasil['no_rangka'].dropna().tolist()
+            # Fallback ke hasil query sebelumnya
+            elif 'no_rangka' in _last_result.columns:
+                print("ℹ Menggunakan hasil query sebelumnya...\n")
+                no_rangka_list = _last_result['no_rangka'].dropna().tolist()
+            else:
+                no_rangka_list = []
+
+            if no_rangka_list:
+                run_sawa(no_rangka_list)
+            else:
+                print("⚠ Tidak ada no_rangka ditemukan di hasil query.\n")
+        except ImportError as e:
+            print(f"⚠ extended_warranty.py tidak ditemukan: {e}\n")
+
+    # 6. Analisa
     if need_analysis(pertanyaan):
         if debug:
             print("MEMANGGIL ANALYSIS MODEL")

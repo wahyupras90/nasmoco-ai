@@ -1,64 +1,42 @@
 """
-etl_tcare_unit.py
-=================
+etl_tcare_unit.py (v2 — vectorized)
+=====================================
 ETL tabel tcare_unit — monitoring TCARE per unit.
-
-Kolom:
-  no_rangka, dealer_kategori, tcare_type,
-  sisa_service, sisa_detail, next_service,
-  last_sbe_km, last_sbe_date, last_sbe_dealer, last_sbe_source,
-  aktif_kategori, sa_terakhir, tgl_sa_terakhir,
-  flag_pending_sbe, flag_sa, flag_tgl_kunjungan,
-  flag_wo_type, next_sbe_expected, last_updated
+Versi optimasi: vectorized pandas, tidak ada Python loop per baris.
 """
 
 import sqlite3
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
-from etl_helpers import (
-    PATHS, DB_PATH, parse_date_flexible, clean_no_rangka
-)
+from etl_helpers import PATHS, DB_PATH, parse_date_flexible, clean_no_rangka
 
 TCARE_NASIONAL_DIR = Path(PATHS["tcare_nasional"])
 MAPPING_CUST_DIR   = Path(PATHS["mapping_cust"])
 
-# Mapping km → service ke (1-7)
 KM_TO_SERVICE = {
-    1000:  1,   # SBI
-    10000: 2,
-    20000: 3,
-    30000: 4,
-    40000: 5,
-    50000: 6,
-    60000: 7,
+    1000: 1, 10000: 2, 20000: 3, 30000: 4,
+    40000: 5, 50000: 6, 60000: 7,
 }
 SERVICE_TO_KM = {v: k for k, v in KM_TO_SERVICE.items()}
-ALL_KM = sorted(KM_TO_SERVICE.keys())
+ALL_KM        = sorted(KM_TO_SERVICE.keys())
 
 
 # ════════════════════════════════════════
-# EXTRACT KM DARI PEKERJAAN
+# EXTRACT KM DARI PEKERJAAN (vectorized)
 # ════════════════════════════════════════
 
-def extract_km_from_pekerjaan(pekerjaan: str):
-    """
-    Extract km dari string pekerjaan SBE.
-    'SERVIS BERKALA 50.000 KM' → 50000
-    'SERVIS BERKALA 1.000 KM'  → 1000
-    """
-    if not pekerjaan or pd.isna(pekerjaan):
-        return None
-    import re
-    p = str(pekerjaan).upper().strip()
-    if 'SERVIS BERKALA' not in p:
-        return None
-    try:
-        clean = p.replace('SERVIS BERKALA ', '').replace('.', '').replace(' KM', '').strip()
-        km = int(clean)
-        return km if km in KM_TO_SERVICE else None
-    except Exception:
-        return None
+def extract_km_series(series: pd.Series) -> pd.Series:
+    """Vectorized extract km dari kolom pekerjaan SBE."""
+    cleaned = (series.str.upper()
+                     .str.replace('SERVIS BERKALA ', '', regex=False)
+                     .str.replace('.', '', regex=False)
+                     .str.replace(' KM', '', regex=False)
+                     .str.strip())
+    km = pd.to_numeric(cleaned, errors='coerce').astype('Int64')
+    valid_km = set(KM_TO_SERVICE.keys())
+    return km.where(km.isin(valid_km))
 
 
 # ════════════════════════════════════════
@@ -66,11 +44,11 @@ def extract_km_from_pekerjaan(pekerjaan: str):
 # ════════════════════════════════════════
 
 def load_sbe_from_unitmasuk() -> pd.DataFrame:
-    """Ambil SBE tertinggi per no_rangka dari unitmasuk."""
+    """Ambil SBE tertinggi per no_rangka dari unitmasuk (vectorized)."""
     conn = sqlite3.connect(DB_PATH)
     try:
         df = pd.read_sql("""
-            SELECT no_rangka, pekerjaan, tgl_invoice, sa, kelompok
+            SELECT no_rangka, pekerjaan, tgl_invoice, sa
             FROM unitmasuk
             WHERE kelompok = 'SBE'
               AND pekerjaan LIKE 'SERVIS BERKALA%'
@@ -82,24 +60,25 @@ def load_sbe_from_unitmasuk() -> pd.DataFrame:
     if len(df) == 0:
         return pd.DataFrame()
 
-    df['km'] = df['pekerjaan'].apply(extract_km_from_pekerjaan)
+    df['km'] = extract_km_series(df['pekerjaan'])
     df = df.dropna(subset=['km'])
     df['km'] = df['km'].astype(int)
 
-    # Ambil km tertinggi per no_rangka
+    # Ambil km tertinggi per no_rangka (vectorized)
     idx = df.groupby('no_rangka')['km'].idxmax()
     result = df.loc[idx, ['no_rangka', 'km', 'tgl_invoice', 'sa']].copy()
-    result = result.rename(columns={
+    return result.rename(columns={
         'km':          'last_sbe_km_um',
         'tgl_invoice': 'last_sbe_date_um',
         'sa':          'last_sbe_dealer_um',
     })
-    return result
 
 
 def load_sbe_from_mapping_cust() -> pd.DataFrame:
-    """Ambil last SBE per no_rangka dari Mapping Cust."""
-    files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)
+    """
+    Ambil last SBE dari Mapping Cust (2 file terbaru, vectorized via melt).
+    """
+    files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
     dfs = []
     for f in files:
         try:
@@ -115,38 +94,60 @@ def load_sbe_from_mapping_cust() -> pd.DataFrame:
     df = df.dropna(subset=['no_rangka'])
     df = df.drop_duplicates(subset=['no_rangka'], keep='first')
 
-    # Cari km tertinggi dari kolom SBE xK
-    km_cols = [(f'SBE {k}K', k * 1000) for k in range(5, 205, 5)
-               if f'SBE {k}K' in df.columns and k * 1000 in KM_TO_SERVICE]
+    # Kolom SBE yang valid
+    valid_km_cols = [(f'SBE {k}K', k * 1000)
+                     for k in range(5, 205, 5)
+                     if f'SBE {k}K' in df.columns and k * 1000 in KM_TO_SERVICE]
 
-    def get_last_sbe_map(row):
-        last_km, last_date, last_dealer = None, None, None
-        for col, km in km_cols:
-            val = row.get(col)
-            if pd.notna(val) and str(val).strip():
-                last_km     = km
-                last_date   = parse_date_flexible(val)
-                dealer_col  = f'Dealer {col}'
-                last_dealer = str(row.get(dealer_col, '')).strip() or None
-        return pd.Series([last_km, last_date, last_dealer])
+    if not valid_km_cols:
+        return pd.DataFrame({'no_rangka': df['no_rangka'],
+                             'last_sbe_km_map': None,
+                             'last_sbe_date_map': None,
+                             'last_sbe_dealer_map': None,
+                             'aktif_kategori': df.get('Kategori', None)})
 
-    df[['last_sbe_km_map', 'last_sbe_date_map', 'last_sbe_dealer_map']] = \
-        df.apply(get_last_sbe_map, axis=1)
+    # Melt ke long format — jauh lebih cepat dari apply per baris
+    sbe_parts = []
+    for col, km in valid_km_cols:
+        dealer_col = f'Dealer {col}'
+        sub = df[['no_rangka', col]].copy()
+        sub = sub[sub[col].notna() & (sub[col].astype(str).str.strip() != '')]
+        if len(sub) == 0:
+            continue
+        sub['km']     = km
+        sub['date']   = sub[col].apply(parse_date_flexible)
+        sub['dealer'] = df[dealer_col].values if dealer_col in df.columns else None
+        sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
 
-    aktif = df.get('Kategori', pd.Series(dtype=str))
+    aktif = df[['no_rangka']].copy()
+    if 'Kategori' in df.columns:
+        aktif['aktif_kategori'] = df['Kategori'].str.strip()
+    else:
+        aktif['aktif_kategori'] = None
 
-    return pd.DataFrame({
-        'no_rangka':          df['no_rangka'],
-        'last_sbe_km_map':    df['last_sbe_km_map'],
-        'last_sbe_date_map':  df['last_sbe_date_map'],
-        'last_sbe_dealer_map':df['last_sbe_dealer_map'],
-        'aktif_kategori':     aktif.str.strip() if aktif is not None else None,
+    if not sbe_parts:
+        result = aktif.copy()
+        result['last_sbe_km_map'] = None
+        result['last_sbe_date_map'] = None
+        result['last_sbe_dealer_map'] = None
+        return result
+
+    sbe_all = pd.concat(sbe_parts, ignore_index=True)
+    idx_max = sbe_all.groupby('no_rangka')['km'].idxmax()
+    last_sbe = sbe_all.loc[idx_max].rename(columns={
+        'km':     'last_sbe_km_map',
+        'date':   'last_sbe_date_map',
+        'dealer': 'last_sbe_dealer_map',
     })
+
+    result = aktif.merge(last_sbe, on='no_rangka', how='left')
+    print(f"  → Mapping Cust SBE: {len(result):,} unit")
+    return result
 
 
 def load_tcare_type_from_nasional() -> pd.DataFrame:
-    """Ambil tcare_type + next_service + sisa dari T-CARE Nasional."""
-    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)
+    """Ambil tcare_type dari 2 file T-CARE Nasional terbaru."""
+    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
     dfs = []
     for f in files:
         try:
@@ -163,10 +164,10 @@ def load_tcare_type_from_nasional() -> pd.DataFrame:
     df = df.drop_duplicates(subset=['no_rangka'], keep='first')
 
     return pd.DataFrame({
-        'no_rangka':      df['no_rangka'],
-        'tcare_type_tc':  df['T-CARE TYPE'].str.strip(),
-        'sisa_tc':        pd.to_numeric(df['SISA'], errors='coerce'),
-        'next_service_tc':df['Next Service'].str.strip(),
+        'no_rangka':       df['no_rangka'],
+        'tcare_type_tc':   df['T-CARE TYPE'].str.strip(),
+        'sisa_tc':         pd.to_numeric(df['SISA'], errors='coerce'),
+        'next_service_tc': df['Next Service'].str.strip(),
     })
 
 
@@ -175,13 +176,16 @@ def load_sa_terakhir() -> pd.DataFrame:
     conn = sqlite3.connect(DB_PATH)
     try:
         df = pd.read_sql("""
-            SELECT no_rangka, sa AS sa_terakhir, tgl_invoice AS tgl_sa_terakhir
-            FROM unitmasuk
-            WHERE tgl_invoice = (
-                SELECT MAX(x.tgl_invoice) FROM unitmasuk x
-                WHERE x.no_rangka = unitmasuk.no_rangka
-            )
-            GROUP BY no_rangka
+            SELECT u.no_rangka, u.sa AS sa_terakhir,
+                   u.tgl_invoice AS tgl_sa_terakhir
+            FROM unitmasuk u
+            INNER JOIN (
+                SELECT no_rangka, MAX(tgl_invoice) AS max_inv
+                FROM unitmasuk
+                GROUP BY no_rangka
+            ) m ON u.no_rangka = m.no_rangka
+              AND u.tgl_invoice = m.max_inv
+            GROUP BY u.no_rangka
         """, conn)
     except Exception:
         df = pd.DataFrame()
@@ -207,11 +211,10 @@ def load_wo_non_sbe() -> pd.DataFrame:
 
 
 # ════════════════════════════════════════
-# HITUNG SISA & DETAIL
+# HITUNG SISA & DETAIL (vectorized)
 # ════════════════════════════════════════
 
 def get_tcare_type(row) -> str:
-    """Logic tcare_type dari rs."""
     if pd.notna(row.get('tcare_type_tc')):
         return row['tcare_type_tc']
     batas = row.get('batas_tcare')
@@ -228,97 +231,109 @@ def get_tcare_type(row) -> str:
     return None
 
 
-def calc_sisa(last_km) -> tuple:
+def calc_sisa_vectorized(km_series: pd.Series) -> pd.DataFrame:
     """
-    Hitung sisa service dan detailnya.
-    Return: (sisa_int, sisa_detail_str, next_service_str)
+    Vectorized hitung sisa service dari series km.
+    Return DataFrame dengan kolom: sisa_service, sisa_detail, next_sbe_expected
     """
-    if pd.isna(last_km) or last_km is None:
-        return 7, '1K, 10K, 20K, 30K, 40K, 50K, 60K', '1ST'
-    try:
-        km = int(last_km)
-    except Exception:
-        return None, None, None
-
-    service_ke = KM_TO_SERVICE.get(km)
-    if service_ke is None:
-        return None, None, None
-
-    sisa = 7 - service_ke
-    remaining_kms = [f"{k//1000}K" if k > 1000 else "1K"
-                     for k in ALL_KM if KM_TO_SERVICE[k] > service_ke]
-    sisa_detail  = ', '.join(remaining_kms) if remaining_kms else 'SELESAI'
-
     ordinal = {1:'1ST',2:'2ND',3:'3RD',4:'4TH',5:'5TH',6:'6TH',7:'7TH'}
-    next_ke  = service_ke + 1
-    next_svc = ordinal.get(next_ke, 'NON PPM') if next_ke <= 7 else 'NON PPM'
 
-    return sisa, sisa_detail, next_svc
+    def _calc(km):
+        if pd.isna(km):
+            return pd.Series([7, '1K, 10K, 20K, 30K, 40K, 50K, 60K', '1ST'])
+        try:
+            km = int(km)
+        except Exception:
+            return pd.Series([None, None, None])
+        svc_ke = KM_TO_SERVICE.get(km)
+        if svc_ke is None:
+            return pd.Series([None, None, None])
+        sisa    = 7 - svc_ke
+        remain  = [f"{k//1000}K" if k > 1000 else "1K"
+                   for k in ALL_KM if KM_TO_SERVICE[k] > svc_ke]
+        detail  = ', '.join(remain) if remain else 'SELESAI'
+        next_ke = svc_ke + 1
+        next_s  = ordinal.get(next_ke, 'NON PPM') if next_ke <= 7 else 'NON PPM'
+        return pd.Series([sisa, detail, next_s])
+
+    result = km_series.apply(_calc)
+    result.columns = ['sisa_service', 'sisa_detail', 'next_sbe_expected']
+    return result
 
 
 # ════════════════════════════════════════
-# DETEKSI FLAG PENDING SBE
+# DETEKSI FLAG PENDING SBE (vectorized)
 # ════════════════════════════════════════
 
-def detect_pending_sbe(master: pd.DataFrame, df_wo: pd.DataFrame) -> pd.DataFrame:
+def detect_pending_sbe_vectorized(master: pd.DataFrame,
+                                  df_wo: pd.DataFrame) -> pd.DataFrame:
     """
-    Flag unit yang kunjungan non-SBE setelah last SBE → kemungkinan
-    SA lupa buat WO SBE.
+    Vectorized deteksi unit yang kunjungan non-SBE setelah last SBE.
+    Menggunakan pandas merge, bukan Python loop.
     """
+    master = master.copy()
+    for col in ['flag_pending_sbe', 'flag_sa', 'flag_tgl_kunjungan',
+                'flag_wo_type', 'flag_next_sbe']:
+        master[col] = None
+    master['flag_pending_sbe'] = False
+
     if len(df_wo) == 0:
-        master['flag_pending_sbe']    = False
-        master['flag_sa']             = None
-        master['flag_tgl_kunjungan']  = None
-        master['flag_wo_type']        = None
-        master['next_sbe_expected']   = None
         return master
 
-    flags = []
-    for _, row in master.iterrows():
-        nr          = row['no_rangka']
-        last_sbe_d  = row.get('last_sbe_date')
-        sisa        = row.get('sisa_service')
-        batas       = row.get('batas_tcare')
-        next_sbe    = row.get('next_sbe_expected')
+    today = pd.Timestamp.today()
 
-        # Kondisi: masih ada TCARE + belum expired + ada last SBE
-        if not (sisa and sisa > 0 and pd.notna(batas)):
-            flags.append((False, None, None, None, None))
-            continue
-        try:
-            if pd.to_datetime(batas) < pd.Timestamp.today():
-                flags.append((False, None, None, None, None))
-                continue
-        except Exception:
-            flags.append((False, None, None, None, None))
-            continue
+    # Filter unit yang eligible
+    batas_dt = pd.to_datetime(master['batas_tcare'], errors='coerce')
+    eligible_mask = (
+        master['sisa_service'].notna() &
+        (master['sisa_service'] > 0) &
+        (batas_dt >= today) &
+        master['last_sbe_date'].notna()
+    )
+    eligible = master.loc[eligible_mask, ['no_rangka', 'last_sbe_date', 'next_sbe_expected']].copy()
 
-        # Cari WO non-SBE setelah last_sbe_date
-        wo_unit = df_wo[df_wo['no_rangka'] == nr].copy()
-        if len(wo_unit) == 0 or pd.isna(last_sbe_d):
-            flags.append((False, None, None, None, None))
-            continue
+    if len(eligible) == 0:
+        return master
 
-        wo_after = wo_unit[wo_unit['tgl_invoice'] > last_sbe_d]
-        if len(wo_after) == 0:
-            flags.append((False, None, None, None, None))
-            continue
+    # Merge dengan WO non-SBE
+    merged = eligible.merge(
+        df_wo[['no_rangka', 'sa', 'tgl_invoice', 'kelompok']],
+        on='no_rangka', how='inner'
+    )
 
-        latest = wo_after.sort_values('tgl_invoice', ascending=False).iloc[0]
-        flags.append((
-            True,
-            latest['sa'],
-            latest['tgl_invoice'],
-            latest['kelompok'],
-            next_sbe,
-        ))
+    # Filter WO setelah last SBE
+    merged = merged[merged['tgl_invoice'] > merged['last_sbe_date']]
+    if len(merged) == 0:
+        return master
 
-    flag_df = pd.DataFrame(flags, columns=[
-        'flag_pending_sbe', 'flag_sa',
-        'flag_tgl_kunjungan', 'flag_wo_type', 'flag_next_sbe'
-    ])
-    master = master.reset_index(drop=True)
-    return pd.concat([master, flag_df], axis=1)
+    # Ambil WO terbaru per no_rangka
+    latest = (merged.sort_values('tgl_invoice', ascending=False)
+                    .drop_duplicates('no_rangka'))
+
+    flag_df = latest[['no_rangka', 'sa', 'tgl_invoice', 'kelompok', 'next_sbe_expected']].copy()
+    flag_df = flag_df.rename(columns={
+        'sa':               'flag_sa',
+        'tgl_invoice':      'flag_tgl_kunjungan',
+        'kelompok':         'flag_wo_type',
+        'next_sbe_expected':'flag_next_sbe',
+    })
+    flag_df['flag_pending_sbe'] = True
+
+    # Merge back
+    flag_cols = ['no_rangka', 'flag_pending_sbe', 'flag_sa',
+                 'flag_tgl_kunjungan', 'flag_wo_type', 'flag_next_sbe']
+    master = master.merge(flag_df[flag_cols], on='no_rangka', how='left',
+                         suffixes=('', '_new'))
+
+    for col in ['flag_pending_sbe', 'flag_sa', 'flag_tgl_kunjungan',
+                'flag_wo_type', 'flag_next_sbe']:
+        new_col = col + '_new'
+        if new_col in master.columns:
+            master[col] = master[new_col].combine_first(master[col])
+            master = master.drop(columns=[new_col])
+
+    master['flag_pending_sbe'] = master['flag_pending_sbe'].fillna(False)
+    return master
 
 
 # ════════════════════════════════════════
@@ -326,22 +341,17 @@ def detect_pending_sbe(master: pd.DataFrame, df_wo: pd.DataFrame) -> pd.DataFram
 # ════════════════════════════════════════
 
 def run(paths: dict = None):
-    print("\n  Load TCARE Unit...")
+    print("\n  Load TCARE Unit (vectorized)...")
+    t0 = datetime.now()
 
-    # ── Load semua sumber ──
     df_sbe_um  = load_sbe_from_unitmasuk()
     df_sbe_map = load_sbe_from_mapping_cust()
     df_tc_type = load_tcare_type_from_nasional()
     df_sa      = load_sa_terakhir()
     df_wo      = load_wo_non_sbe()
 
-    # ── Ambil no_rangka dari rs ──
     conn = sqlite3.connect(DB_PATH)
-    df_rs = pd.read_sql("""
-        SELECT no_rangka, dealer_kategori, batas_tcare
-        FROM rs
-    """, conn)
-    # Ambil model untuk derive tcare_type
+    df_rs = pd.read_sql("SELECT no_rangka, dealer_kategori, batas_tcare FROM rs", conn)
     try:
         df_model = pd.read_sql("SELECT no_rangka, model FROM rs", conn)
     except Exception:
@@ -350,76 +360,61 @@ def run(paths: dict = None):
 
     master = df_rs.copy()
 
-    # ── Merge tcare_type dari nasional ──
     if len(df_tc_type) > 0:
         master = master.merge(df_tc_type, on='no_rangka', how='left')
-
-    # ── Merge model ──
     if len(df_model) > 0:
         master = master.merge(df_model, on='no_rangka', how='left')
 
-    # ── Tentukan tcare_type ──
     master['tcare_type'] = master.apply(get_tcare_type, axis=1)
 
-    # ── Merge SBE dari unitmasuk ──
     if len(df_sbe_um) > 0:
         master = master.merge(df_sbe_um, on='no_rangka', how='left')
-
-    # ── Merge SBE dari mapping cust ──
     if len(df_sbe_map) > 0:
         master = master.merge(df_sbe_map, on='no_rangka', how='left')
 
-    # ── Pilih last_sbe_km terbesar dari dua sumber ──
+    # Pilih km tertinggi (vectorized)
     km_um  = pd.to_numeric(master.get('last_sbe_km_um',  pd.Series(dtype=float)), errors='coerce')
     km_map = pd.to_numeric(master.get('last_sbe_km_map', pd.Series(dtype=float)), errors='coerce')
+    master['last_sbe_km'] = np.fmax(km_um.values, km_map.values)  # fmax = max ignoring NaN
 
-    master['last_sbe_km'] = km_um.combine(km_map, lambda a, b:
-        max(x for x in [a, b] if pd.notna(x)) if any(pd.notna(x) for x in [a, b]) else None
+    # Source
+    master['last_sbe_source'] = np.select(
+        [km_um.isna() & km_map.notna(),
+         km_um.notna() & km_map.isna(),
+         km_um.notna() & km_map.notna() & (km_um >= km_map),
+         km_um.notna() & km_map.notna() & (km_um < km_map)],
+        ['mapping_cust', 'unitmasuk', 'unitmasuk', 'mapping_cust'],
+        default=None
+    )
+    master['last_sbe_date'] = np.where(
+        master['last_sbe_source'] == 'unitmasuk',
+        master.get('last_sbe_date_um'),
+        master.get('last_sbe_date_map')
+    )
+    master['last_sbe_dealer'] = np.where(
+        master['last_sbe_source'] == 'unitmasuk',
+        master.get('last_sbe_dealer_um'),
+        master.get('last_sbe_dealer_map')
     )
 
-    # Tentukan source
-    def get_source(row):
-        um  = row.get('last_sbe_km_um')
-        mp  = row.get('last_sbe_km_map')
-        if pd.isna(um) and pd.isna(mp):   return None
-        if pd.isna(um):                    return 'mapping_cust'
-        if pd.isna(mp):                    return 'unitmasuk'
-        return 'unitmasuk' if um >= mp else 'mapping_cust'
+    # Hitung sisa vectorized
+    sisa_df = calc_sisa_vectorized(master['last_sbe_km'])
+    master['sisa_service']      = sisa_df['sisa_service']
+    master['sisa_detail']       = sisa_df['sisa_detail']
+    master['next_sbe_expected'] = sisa_df['next_sbe_expected']
 
-    master['last_sbe_source'] = master.apply(get_source, axis=1)
-    master['last_sbe_date']   = master.apply(
-        lambda r: r.get('last_sbe_date_um')
-        if r.get('last_sbe_source') == 'unitmasuk'
-        else r.get('last_sbe_date_map'), axis=1)
-    master['last_sbe_dealer'] = master.apply(
-        lambda r: r.get('last_sbe_dealer_um')
-        if r.get('last_sbe_source') == 'unitmasuk'
-        else r.get('last_sbe_dealer_map'), axis=1)
-
-    # ── Hitung sisa, sisa_detail, next_service ──
-    sisa_tuples = master['last_sbe_km'].apply(calc_sisa)
-    master['sisa_service']     = [t[0] for t in sisa_tuples]
-    master['sisa_detail']      = [t[1] for t in sisa_tuples]
-    master['next_sbe_expected'] = [t[2] for t in sisa_tuples]
-
-    # Pakai sisa dari T-CARE Nasional kalau lebih fresh dan ada
+    # Override dari T-CARE Nasional kalau mapping_cust source
     if 'sisa_tc' in master.columns:
-        mask = master['last_sbe_source'].isin(['mapping_cust', None]) & master['sisa_tc'].notna()
+        mask = (master['last_sbe_source'] == 'mapping_cust') & master['sisa_tc'].notna()
         master.loc[mask, 'sisa_service'] = master.loc[mask, 'sisa_tc']
-    if 'next_service_tc' in master.columns:
-        mask = master['next_service_tc'].notna() & master['last_sbe_source'].isin(['mapping_cust', None])
-        master.loc[mask, 'next_service'] = master.loc[mask, 'next_service_tc']
-    else:
-        master['next_service'] = master.get('next_sbe_expected')
+    master['next_service'] = master.get('next_sbe_expected')
 
-    # ── Merge SA terakhir ──
     if len(df_sa) > 0:
         master = master.merge(df_sa, on='no_rangka', how='left')
 
-    # ── Deteksi flag pending SBE ──
-    master = detect_pending_sbe(master, df_wo)
+    # Flag pending SBE (vectorized)
+    master = detect_pending_sbe_vectorized(master, df_wo)
 
-    # ── Kolom final ──
     final_cols = [
         'no_rangka', 'dealer_kategori', 'tcare_type',
         'sisa_service', 'sisa_detail', 'next_service',
@@ -432,19 +427,19 @@ def run(paths: dict = None):
         if c not in master.columns:
             master[c] = None
     master = master[final_cols].copy()
-    # Hapus kolom duplikat kalau ada
     master = master.loc[:, ~master.columns.duplicated()]
     master['last_updated'] = datetime.now().strftime('%Y-%m-%d')
 
-    # ── Simpan ke DB ──
     conn = sqlite3.connect(DB_PATH)
     master.to_sql('tcare_unit', conn, if_exists='replace', index=False)
     conn.execute('CREATE INDEX IF NOT EXISTS idx_tcu_rangka ON tcare_unit(no_rangka)')
     conn.commit()
     conn.close()
 
-    flag_n = master['flag_pending_sbe'].sum() if 'flag_pending_sbe' in master.columns else 0
-    print(f"  ✅ tcare_unit: {len(master):,} unit ({int(flag_n)} pending SBE flag)")
+    elapsed = (datetime.now() - t0).total_seconds()
+    flag_n  = master['flag_pending_sbe'].sum()
+    print(f"  ✅ tcare_unit: {len(master):,} unit "
+          f"({int(flag_n)} pending SBE) — {elapsed:.1f} detik")
 
 
 if __name__ == '__main__':
