@@ -116,7 +116,7 @@ def load_sbe_from_mapping_cust() -> pd.DataFrame:
             continue
         sub['km']     = km
         sub['date']   = sub[col].apply(parse_date_flexible)
-        sub['dealer'] = df[dealer_col].values if dealer_col in df.columns else None
+        sub['dealer'] = df.loc[sub.index, dealer_col] if dealer_col in df.columns else None
         sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
 
     aktif = df[['no_rangka']].copy()
@@ -343,12 +343,23 @@ def detect_pending_sbe_vectorized(master: pd.DataFrame,
 def run(paths: dict = None):
     print("\n  Load TCARE Unit (vectorized)...")
     t0 = datetime.now()
+    import time
 
+    t = time.time()
     df_sbe_um  = load_sbe_from_unitmasuk()
+    print(f"    sbe_um        : {time.time()-t:.1f}s"); t = time.time()
+
     df_sbe_map = load_sbe_from_mapping_cust()
+    print(f"    sbe_map       : {time.time()-t:.1f}s"); t = time.time()
+
     df_tc_type = load_tcare_type_from_nasional()
+    print(f"    tc_type       : {time.time()-t:.1f}s"); t = time.time()
+
     df_sa      = load_sa_terakhir()
+    print(f"    sa_terakhir   : {time.time()-t:.1f}s"); t = time.time()
+
     df_wo      = load_wo_non_sbe()
+    print(f"    wo_non_sbe    : {time.time()-t:.1f}s"); t = time.time()
 
     conn = sqlite3.connect(DB_PATH)
     df_rs = pd.read_sql("SELECT no_rangka, dealer_kategori, batas_tcare FROM rs", conn)
@@ -357,6 +368,7 @@ def run(paths: dict = None):
     except Exception:
         df_model = pd.DataFrame()
     conn.close()
+    print(f"    load_rs       : {time.time()-t:.1f}s"); t = time.time()
 
     master = df_rs.copy()
 

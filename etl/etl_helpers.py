@@ -77,22 +77,54 @@ def parse_date_flexible(val) -> str:
 # ADDRESS PARSER
 # ════════════════════════════════════════
 
+# Kabupaten/kota yang dikenali untuk fallback split "KECAMATAN KABUPATEN"
+KNOWN_KAB = {
+    'BREBES', 'TEGAL', 'PEMALANG', 'PEKALONGAN', 'SEMARANG',
+    'KENDAL', 'BANYUMAS', 'CILACAP', 'BATANG', 'MAGELANG',
+    'GROBOGAN', 'PURBALINGGA', 'BANJARNEGARA', 'BANTUL',
+    'SLEMAN', 'YOGYAKARTA', 'SURAKARTA', 'SALATIGA', 'KLATEN',
+    'DEMAK', 'JEPARA', 'KUDUS', 'REMBANG', 'BOYOLALI',
+    'KARANGANYAR', 'TEMANGGUNG', 'WONOGIRI', 'WONOSOBO',
+}
+
 def parse_alamat(alamat: str) -> tuple:
     """
     Extract kecamatan dan kabupaten dari Alamat STNK.
+
+    Format yang didukung:
+      1. "... KEC. KECAMATAN KAB./KOTA KABUPATEN ..."  (dengan prefix)
+      2. "KECAMATAN KABUPATEN"                          (tanpa prefix, kata terakhir = kab)
+
     Return: (kecamatan, kabupaten) atau (None, None).
+    Kabupaten selalu distandarisasi dengan prefix "KAB." atau "KOTA".
     """
     if not alamat or pd.isna(alamat):
         return None, None
     alamat = str(alamat).upper().strip()
-    kec = None
-    m = re.search(r'KEC\.\s+([A-Z0-9 ]+?)(?:\s+(?:KAB\.|KOTA)|$)', alamat)
+
+    kec, kab = None, None
+
+    # Format 1: ada prefix KEC. — ekstrak kecamatan (nama saja, bukan alamat lengkap)
+    m = re.search(r'KEC\.\s+([A-Z][A-Z ]{0,30}?)(?:\s+(?:KAB\.|KOTA)|\s*$)', alamat)
     if m:
         kec = m.group(1).strip()
-    kab = None
-    m = re.search(r'(KAB\.|KOTA)\s+([A-Z0-9 ]+?)(?:\s+\d|$)', alamat)
+
+    # Format 1: ada prefix KAB. atau KOTA
+    m = re.search(r'(KAB\.|KOTA)\s+([A-Z0-9][A-Z0-9 ]{0,30}?)(?:\s+\d|\s*$)', alamat)
     if m:
         kab = f"{m.group(1).strip()} {m.group(2).strip()}"
+
+    # Format 2: "KECAMATAN KABUPATEN" tanpa prefix
+    # Aktif jika kabupaten belum terisi dan kata terakhir dikenali sebagai kab/kota
+    if kab is None:
+        parts = alamat.split()
+        if len(parts) >= 2 and parts[-1] in KNOWN_KAB:
+            kab = 'KAB. ' + parts[-1].strip()  # standarisasi prefix
+            if kec is None:
+                kec = ' '.join(parts[:-1]).strip()
+        elif kec is None and len(parts) >= 1:
+            kec = alamat  # fallback: simpan apa adanya
+
     return kec, kab
 
 

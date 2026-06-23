@@ -292,6 +292,9 @@ def build_rs(folder: str) -> pd.DataFrame:
 
     # ── Hitung batas_tcare, in_tcare, sisa_bulan_tcare ──
     tgl_do_dt = pd.to_datetime(master['tgl_do'], errors='coerce')
+    # Nullify dummy dates dari TAM (1900-xx-xx dan 3000-xx-xx)
+    tgl_do_dt = tgl_do_dt.where(~tgl_do_dt.dt.year.isin([1900, 3000]))
+    master['tgl_do'] = tgl_do_dt.dt.strftime('%Y-%m-%d')
     batas      = (tgl_do_dt + pd.DateOffset(months=36)
                  ).dt.to_period('M').dt.to_timestamp('M')
     today      = pd.Timestamp.today()
