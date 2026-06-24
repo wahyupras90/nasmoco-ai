@@ -149,8 +149,40 @@ def load_tcare_nasional() -> pd.DataFrame:
 # LOAD MAPPING CUST
 # ════════════════════════════════════════
 
-def load_mapping_cust() -> pd.DataFrame:
-    """Baca 2 file Mapping Cust terbaru → BERKAH units."""
+def _process_mapping_cust(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """Proses raw Mapping Cust DataFrame → result untuk rs table."""
+    import time
+    t = time.time()
+    df = df_raw.copy()
+
+    # Vectorized clean_no_rangka
+    df['no_rangka'] = (df['No. CHASSIS']
+                       .astype(str).str.strip().str.lstrip('.')
+                       .str.strip())
+    df = df[df['no_rangka'].str.len() > 5]
+    df = df[df['no_rangka'] != 'nan']
+    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+
+    tgl_do_map = None
+    if 'DELIVERY DATE' in df.columns:
+        tgl_do_map = pd.to_datetime(
+            df['DELIVERY DATE'], dayfirst=True, errors='coerce'
+        ).dt.strftime('%Y-%m-%d')
+
+    result = pd.DataFrame({
+        'no_rangka':          df['no_rangka'].values,
+        'customer_map':       df['NAMA CUSTOMER'].str.strip().values if 'NAMA CUSTOMER' in df.columns else None,
+        'model_map':          df['NAMA MODEL'].str.strip().values    if 'NAMA MODEL'    in df.columns else None,
+        'tgl_do_map':         tgl_do_map.values if tgl_do_map is not None else None,
+        'dealer_penjual_map': df['Dealer Penjual'].values if 'Dealer Penjual' in df.columns else None,
+    })
+    return result
+
+
+def load_mapping_cust_raw() -> pd.DataFrame:
+    """Baca 2 file Mapping Cust terbaru → raw DataFrame (semua kolom asli).
+    Dipakai untuk sharing antar modul tanpa baca file dua kali.
+    """
     files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
     dfs = []
     for f in files:
@@ -163,19 +195,15 @@ def load_mapping_cust() -> pd.DataFrame:
             print(f"  ⚠ Skip {f.name}: {e}")
     if not dfs:
         return pd.DataFrame()
+    return pd.concat(dfs, ignore_index=True)
 
-    df = pd.concat(dfs, ignore_index=True)
-    df['no_rangka'] = df['No. CHASSIS'].apply(clean_no_rangka)
-    df = df.dropna(subset=['no_rangka'])
-    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
 
-    result = pd.DataFrame({
-        'no_rangka':      df['no_rangka'],
-        'customer_map':   df['NAMA CUSTOMER'].str.strip() if 'NAMA CUSTOMER' in df else None,
-        'model_map':      df['NAMA MODEL'].str.strip()    if 'NAMA MODEL'    in df else None,
-        'tgl_do_map':     df['DELIVERY DATE'].apply(parse_date_flexible) if 'DELIVERY DATE' in df else None,
-        'dealer_penjual_map': df.get('Dealer Penjual', pd.Series(dtype=str)),
-    })
+def load_mapping_cust() -> pd.DataFrame:
+    """Baca 2 file Mapping Cust terbaru → BERKAH units."""
+    df_raw = load_mapping_cust_raw()
+    if len(df_raw) == 0:
+        return pd.DataFrame()
+    result = _process_mapping_cust(df_raw)
     print(f"  → Mapping Cust: {len(result):,} unit unik")
     return result
 
@@ -185,21 +213,24 @@ def load_mapping_cust() -> pd.DataFrame:
 # ════════════════════════════════════════
 
 def load_nopol_from_unitmasuk() -> pd.DataFrame:
-    """Ambil no_polisi terbaru per no_rangka dari unitmasuk."""
+    """Ambil no_polisi terbaru per no_rangka dari unitmasuk.
+    Menggunakan JOIN ke subquery MAX — lebih cepat dari correlated subquery.
+    """
     conn = sqlite3.connect(DB_PATH)
     try:
         df = pd.read_sql("""
-            SELECT no_rangka, no_polisi
-            FROM unitmasuk
-            WHERE no_polisi IS NOT NULL AND TRIM(no_polisi) != ''
-              AND no_rangka IS NOT NULL AND TRIM(no_rangka) != ''
-              AND tgl_invoice = (
-                SELECT MAX(x.tgl_invoice)
-                FROM unitmasuk x
-                WHERE x.no_rangka = unitmasuk.no_rangka
-                  AND x.no_polisi IS NOT NULL AND TRIM(x.no_polisi) != ''
-              )
-            GROUP BY no_rangka
+            SELECT u.no_rangka, u.no_polisi
+            FROM unitmasuk u
+            INNER JOIN (
+                SELECT no_rangka, MAX(tgl_invoice) AS max_inv
+                FROM unitmasuk
+                WHERE no_polisi IS NOT NULL AND TRIM(no_polisi) != ''
+                  AND no_rangka IS NOT NULL AND TRIM(no_rangka) != ''
+                GROUP BY no_rangka
+            ) m ON u.no_rangka = m.no_rangka
+              AND u.tgl_invoice = m.max_inv
+              AND u.no_polisi IS NOT NULL AND TRIM(u.no_polisi) != ''
+            GROUP BY u.no_rangka
         """, conn)
     except Exception:
         df = pd.DataFrame(columns=['no_rangka', 'no_polisi'])
@@ -211,22 +242,34 @@ def load_nopol_from_unitmasuk() -> pd.DataFrame:
 # BUILD RS TABLE
 # ════════════════════════════════════════
 
-def build_rs(folder: str) -> pd.DataFrame:
-    """Gabungkan semua sumber menjadi master unit."""
+def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
+    """Gabungkan semua sumber menjadi master unit.
+    
+    df_map_cache: opsional, pass DataFrame Mapping Cust jika sudah dimuat
+                  di luar (untuk menghindari baca file dua kali).
+    """
+    import time
+    t = time.time()
 
     # 1. RS Tegal (OWN)
     df_own = load_rs_tegal(folder)
-    print(f"  → OWN: {len(df_own):,} unit dari RS Tegal")
+    print(f"  → OWN: {len(df_own):,} unit dari RS Tegal ({time.time()-t:.1f}s)"); t = time.time()
 
     # 2. TCARE Nasional
     df_tc = load_tcare_nasional()
+    print(f"    tc_nasional   : {time.time()-t:.1f}s"); t = time.time()
 
-    # 3. Mapping Cust
-    df_map = load_mapping_cust()
+    # 3. Mapping Cust (gunakan raw cache jika ada, proses jadi result)
+    if df_map_cache is not None:
+        df_map = _process_mapping_cust(df_map_cache)
+        print(f"    mapping_cust  : dari cache ({time.time()-t:.1f}s)"); t = time.time()
+    else:
+        df_map = load_mapping_cust()
+        print(f"    mapping_cust  : {time.time()-t:.1f}s"); t = time.time()
 
     # 4. No polisi valid dari unitmasuk
     df_nopol = load_nopol_from_unitmasuk()
-    print(f"  → no_polisi valid dari unitmasuk: {len(df_nopol):,}")
+    print(f"  → no_polisi valid dari unitmasuk: {len(df_nopol):,} ({time.time()-t:.1f}s)"); t = time.time()
 
     # ── Kumpulkan semua no_rangka ──
     all_nr = set()
@@ -358,10 +401,10 @@ def load_rs(folder: str) -> pd.DataFrame:
 # RUN
 # ════════════════════════════════════════
 
-def run(paths: dict = None):
+def run(paths: dict = None, map_cache=None):
     folder = (paths or {}).get('rs', PATHS['rs'])
     print("\n  Load RS (master unit)...")
-    df = build_rs(folder)
+    df = build_rs(folder, df_map_cache=map_cache)
 
     conn = sqlite3.connect(DB_PATH)
     df.to_sql('rs', conn, if_exists='replace', index=False)

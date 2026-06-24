@@ -45,7 +45,10 @@ EXCEL_KEYWORDS = [
 SAWA_KEYWORDS = [
     "extended warranty", "sawa",
     "download warranty", "cek warranty",
-    "warranty sawa"
+    "warranty sawa", "ambil warranty",
+    "ambil sawa", "download sawa",
+    "ambil extended", "sertifikat warranty",
+    "sertifikat sawa"
 ]
 
 def need_sawa(text: str) -> bool:
@@ -62,6 +65,21 @@ def need_analysis(text: str) -> bool:
 
 def need_export(text: str) -> bool:
     return any(w in text.lower() for w in EXCEL_KEYWORDS)
+
+DIRECT_EXPORT_KEYWORDS = [
+    "export", "simpan excel", "simpan di excel",
+    "download excel", "ke excel", "export excel", 
+    "unduh", "save excel"
+]
+def is_direct_export(text: str) -> bool:
+    """Pertanyaan hanya minta export tanpa query baru."""
+    t = text.lower().strip()
+    # Hanya export kalau kalimat pendek dan tidak ada kata query
+    query_words = ['list','tampilkan','berapa','siapa','kapan',
+                   'tcare','cpus','revenue','sa','bulan','tahun']
+    has_query = any(w in t for w in query_words)
+    has_export = any(w in t for w in DIRECT_EXPORT_KEYWORDS)
+    return has_export and not has_query
 
 
 # ════════════════════════════════════════
@@ -106,6 +124,26 @@ def clean_sql(raw: str) -> str:
     sql = sql.strip()
     if sql and not sql.endswith(";"):
         sql += ";"
+    return sql
+
+
+# Typo kolom yang sering terjadi → auto-fix sebelum execute
+COLUMN_FIXES = {
+    r'\btcara_type\b':   'tcare_type',
+    r'\btcare_typ\b':    'tcare_type',
+    r'\bbatas_tare\b':   'batas_tcare',
+    r'\btotal_rev\b':    'total_revenue',
+    r'\bsa_terakhi\b':   'sa_terakhir',
+    r'\blast_sbe_k\b':   'last_sbe_km',
+    r'\bsisa_servis\b':  'sisa_service',
+    r'\bsisa_detal\b':   'sisa_detail',
+    r'\bflag_pendin\b':  'flag_pending_sbe',
+}
+
+def fix_typos(sql: str) -> str:
+    """Auto-fix typo nama kolom yang umum terjadi."""
+    for pattern, correct in COLUMN_FIXES.items():
+        sql = re.sub(pattern, correct, sql, flags=re.IGNORECASE)
     return sql
 
 
@@ -299,23 +337,42 @@ def export_excel(df: pd.DataFrame,
 TCARE_KEYWORDS = ['tcare', 'batas_tcare', 'sbe terakhir',
                   'habis tcare', 'expired tcare', 'sisa tcare']
 
-def build_sql_prompt(pertanyaan: str) -> str:
+def build_sql_prompt(pertanyaan: str) -> list:
+    """
+    Return messages array dengan cache_control pada SQL_PROMPT (statis).
+    TCARE hint dan pertanyaan user tetap di user message (dinamis, tidak di-cache).
+    """
     tcare_hint = ""
     if any(k in pertanyaan.lower() for k in TCARE_KEYWORDS):
         tcare_hint = (
-            "\n\u26a0 TCARE QUERY: WAJIB gunakan FROM unit_tcare\n"
+            "⚠ TCARE QUERY: WAJIB gunakan FROM unit_tcare\n"
             "JANGAN buat CTE dari unitmasuk untuk SBE/SA terakhir.\n"
             "Contoh: SELECT no_rangka, sa_terakhir, last_sbe_km "
-            "FROM unit_tcare WHERE ...\n"
+            "FROM unit_tcare WHERE ...\n\n"
         )
-    return f"""{SQL_PROMPT}{tcare_hint}
 
-Pertanyaan user:
-{pertanyaan}
+    user_content = (
+        f"{tcare_hint}"
+        f"Pertanyaan user:\n{pertanyaan}\n\n"
+        f"TUGAS:\nBuat 1 query SQL saja."
+    )
 
-TUGAS:
-Buat 1 query SQL saja.
-"""
+    return [
+        {
+            "role": "system",
+            "content": [
+                {
+                    "type": "text",
+                    "text": SQL_PROMPT,
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ]
+        },
+        {
+            "role": "user",
+            "content": user_content
+        }
+    ]
 
 def build_analyst_prompt(pertanyaan: str, hasil_str: str) -> str:
     return f"""Pertanyaan:
@@ -344,19 +401,48 @@ def run(pertanyaan: str, debug: bool = False):
     Jalankan flow SQL lengkap:
     pertanyaan → SQL → execute → [analisa] → [export]
     """
+    # 0. Direct export — kalau hanya minta export tanpa query baru
+    global _last_result
+    if is_direct_export(pertanyaan):
+        if not _last_result.empty:
+            print(f"📊 Export hasil query sebelumnya ({len(_last_result):,} baris)...")
+            try:
+                path = export_excel(_last_result, pertanyaan)
+                print(f"✅ Excel tersimpan: {path}\n")
+            except Exception as ex:
+                print(f"⚠ Gagal export: {ex}\n")
+            return
+        else:
+            print("⚠ Belum ada hasil query untuk di-export.\n")
+            return
+
+    # 0b. Direct SAWA — skip SQL, pakai _last_result langsung
+    if need_sawa(pertanyaan) and 'no_rangka' in _last_result.columns and not _last_result.empty:
+        try:
+            from tools.extended_warranty import run as run_sawa
+            no_rangka_list = _last_result['no_rangka'].dropna().tolist()
+            print(f"ℹ Menggunakan {len(no_rangka_list)} no_rangka dari query sebelumnya...\n")
+            run_sawa(no_rangka_list)
+        except ImportError as e:
+            print(f"⚠ extended_warranty.py tidak ditemukan: {e}\n")
+        return
+
     # 1. Generate SQL
-    prompt_sql = build_sql_prompt(pertanyaan)
+    messages_sql = build_sql_prompt(pertanyaan)
     if debug:
-        print(f"PROMPT LENGTH = {len(prompt_sql)}")
+        # Hitung total panjang konten untuk debug
+        total_len = len(SQL_PROMPT) + len(pertanyaan)
+        print(f"PROMPT LENGTH = {total_len} (SQL_PROMPT cached)")
 
     t0      = datetime.now()
-    raw_sql = ask_ai(prompt_sql, mode="sql")
+    raw_sql = ask_ai(messages_sql, mode="sql")
     elapsed = (datetime.now() - t0).total_seconds()
     if debug:
         print(f"RESPON AI {elapsed:.1f} detik")
         print(f"\nRAW SQL:\n{raw_sql}\n")
 
     sql = clean_sql(raw_sql)
+    sql = fix_typos(sql)
     if debug:
         print(f"\nSQL:\n{sql}\n")
 
@@ -386,7 +472,6 @@ def run(pertanyaan: str, debug: bool = False):
         return
 
     # Simpan hasil terakhir untuk referensi berikutnya
-    global _last_result
     _last_result = hasil.copy()
 
     hasil_str = format_hasil(hasil)

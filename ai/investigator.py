@@ -145,6 +145,33 @@ def build_investigator_prompt(pertanyaan: str,
 
 
 # ════════════════════════════════════════
+# CACHED MESSAGES BUILDER
+# ════════════════════════════════════════
+
+def _build_investigator_messages(user_prompt: str) -> list:
+    """
+    Bangun messages array dengan cache_control pada INVESTIGATOR_SYSTEM (statis).
+    User prompt (dinamis) dikirim tanpa cache.
+    """
+    return [
+        {
+            "role": "system",
+            "content": [
+                {
+                    "type": "text",
+                    "text": INVESTIGATOR_SYSTEM,
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ]
+        },
+        {
+            "role": "user",
+            "content": user_prompt
+        }
+    ]
+
+
+# ════════════════════════════════════════
 # RUN — entry point dari main.py
 # ════════════════════════════════════════
 
@@ -178,9 +205,8 @@ def run(pertanyaan: str, debug: bool = False):
 
         t0       = datetime.now()
         response = ask_ai(
-            user_prompt   = prompt,
-            system_prompt = INVESTIGATOR_SYSTEM,
-            mode          = "analysis"
+            user_prompt = _build_investigator_messages(prompt),
+            mode        = "analysis"
         )
         elapsed = (datetime.now() - t0).total_seconds()
 
@@ -230,9 +256,8 @@ def run(pertanyaan: str, debug: bool = False):
                         user_input        = "Tulis KESIMPULAN FINAL berdasarkan semua data di atas."
                     )
                     kesimpulan = ask_ai(
-                        user_prompt   = final_prompt,
-                        system_prompt = INVESTIGATOR_SYSTEM,
-                        mode          = "analysis"
+                        user_prompt = _build_investigator_messages(final_prompt),
+                        mode        = "analysis"
                     )
                     print(f"\nKESIMPULAN:\n{kesimpulan}\n")
                     break
@@ -312,9 +337,8 @@ def run(pertanyaan: str, debug: bool = False):
                 user_input        = "Tulis KESIMPULAN FINAL berdasarkan semua data di atas."
             )
             kesimpulan = ask_ai(
-                user_prompt   = final_prompt,
-                system_prompt = INVESTIGATOR_SYSTEM,
-                mode          = "analysis"
+                user_prompt = _build_investigator_messages(final_prompt),
+                mode        = "analysis"
             )
             print(f"\nKESIMPULAN:\n{kesimpulan}\n")
             break

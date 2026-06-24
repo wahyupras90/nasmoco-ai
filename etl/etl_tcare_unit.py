@@ -74,25 +74,38 @@ def load_sbe_from_unitmasuk() -> pd.DataFrame:
     })
 
 
-def load_sbe_from_mapping_cust() -> pd.DataFrame:
+def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
     """
     Ambil last SBE dari Mapping Cust (2 file terbaru, vectorized via melt).
+    df_map: opsional raw DataFrame Mapping Cust (kolom No. CHASSIS harus ada).
+            Jika None, baca dari file.
     """
-    files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
-    dfs = []
-    for f in files:
-        try:
-            df = pd.read_csv(f, sep=';', encoding='latin1', low_memory=False)
-            dfs.append(df)
-        except Exception:
-            pass
-    if not dfs:
-        return pd.DataFrame()
-
-    df = pd.concat(dfs, ignore_index=True)
-    df['no_rangka'] = df['No. CHASSIS'].apply(clean_no_rangka)
-    df = df.dropna(subset=['no_rangka'])
-    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+    if df_map is not None and 'No. CHASSIS' in df_map.columns:
+        # Gunakan raw cache — clean dan dedup
+        df = df_map.copy()
+        df['no_rangka'] = (df['No. CHASSIS']
+                           .astype(str).str.strip().str.lstrip('.').str.strip())
+        df = df[df['no_rangka'].str.len() > 5]
+        df = df[df['no_rangka'] != 'nan']
+        df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+    else:
+        # Baca dari file
+        files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
+        dfs = []
+        for f in files:
+            try:
+                df = pd.read_csv(f, sep=';', encoding='latin1', low_memory=False)
+                dfs.append(df)
+            except Exception:
+                pass
+        if not dfs:
+            return pd.DataFrame()
+        df = pd.concat(dfs, ignore_index=True)
+        df['no_rangka'] = (df['No. CHASSIS']
+                           .astype(str).str.strip().str.lstrip('.').str.strip())
+        df = df[df['no_rangka'].str.len() > 5]
+        df = df[df['no_rangka'] != 'nan']
+        df = df.drop_duplicates(subset=['no_rangka'], keep='first')
 
     # Kolom SBE yang valid
     valid_km_cols = [(f'SBE {k}K', k * 1000)
@@ -106,16 +119,19 @@ def load_sbe_from_mapping_cust() -> pd.DataFrame:
                              'last_sbe_dealer_map': None,
                              'aktif_kategori': df.get('Kategori', None)})
 
-    # Melt ke long format — jauh lebih cepat dari apply per baris
+    # Melt ke long format — vectorized pd.to_datetime, tanpa apply per baris
     sbe_parts = []
     for col, km in valid_km_cols:
         dealer_col = f'Dealer {col}'
-        sub = df[['no_rangka', col]].copy()
-        sub = sub[sub[col].notna() & (sub[col].astype(str).str.strip() != '')]
+        mask = df[col].notna() & (df[col].astype(str).str.strip() != '')
+        sub = df.loc[mask, ['no_rangka', col]].copy()
         if len(sub) == 0:
             continue
-        sub['km']     = km
-        sub['date']   = sub[col].apply(parse_date_flexible)
+        sub['km'] = km
+        # Vectorized date parse — jauh lebih cepat dari apply(parse_date_flexible)
+        sub['date'] = pd.to_datetime(
+            sub[col], dayfirst=True, errors='coerce'
+        ).dt.strftime('%Y-%m-%d')
         sub['dealer'] = df.loc[sub.index, dealer_col] if dealer_col in df.columns else None
         sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
 
@@ -340,7 +356,7 @@ def detect_pending_sbe_vectorized(master: pd.DataFrame,
 # RUN
 # ════════════════════════════════════════
 
-def run(paths: dict = None):
+def run(paths: dict = None, map_cache=None):
     print("\n  Load TCARE Unit (vectorized)...")
     t0 = datetime.now()
     import time
@@ -349,7 +365,7 @@ def run(paths: dict = None):
     df_sbe_um  = load_sbe_from_unitmasuk()
     print(f"    sbe_um        : {time.time()-t:.1f}s"); t = time.time()
 
-    df_sbe_map = load_sbe_from_mapping_cust()
+    df_sbe_map = load_sbe_from_mapping_cust(df_map=map_cache)
     print(f"    sbe_map       : {time.time()-t:.1f}s"); t = time.time()
 
     df_tc_type = load_tcare_type_from_nasional()

@@ -124,3 +124,6 @@ dibuktikan dari data:
 
 "Perlu data tambahan
 untuk menentukan penyebab."
+
+MoM bulan berjalan: ingatkan bahwa bulan ini belum selesai, 
+perbandingan tidak apple-to-apple

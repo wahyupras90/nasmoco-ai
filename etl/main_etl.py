@@ -128,7 +128,10 @@ if __name__ == '__main__':
         run_daily()
     elif args.monthly:
         print("\n▶ Mode: BULANAN")
-        run_rs()
-        run_tcare_unit()
+        # Baca Mapping Cust RAW sekali, share ke kedua modul
+        from etl_rs import load_mapping_cust_raw
+        df_map_raw = load_mapping_cust_raw()
+        run_rs(map_cache=df_map_raw)
+        run_tcare_unit(map_cache=df_map_raw)
     else:
         run_all()

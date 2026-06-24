@@ -13,23 +13,32 @@ ANALYSIS_MODEL = "anthropic/claude-sonnet-4-5"
 
 
 def ask_ai(
-    user_prompt: str,
+    user_prompt,                # str ATAU list[dict] messages array
     system_prompt: str = "",
     mode: str = "sql",
     max_retries: int = 3,
 ) -> str:
     """
     Kirim prompt ke OpenRouter.
-    mode='sql'      → model gratis (cepat, konsisten)
-    mode='analysis' → model premium (lebih tajam)
+    mode='sql'      → SQL model (Qwen)
+    mode='analysis' → Analysis model (Claude)
     Retry otomatis untuk rate limit / timeout.
+
+    user_prompt bisa berupa:
+    - str  → dibungkus jadi messages biasa (backward compatible)
+    - list → messages array langsung (mendukung cache_control)
     """
     model = SQL_MODEL if mode == "sql" else ANALYSIS_MODEL
 
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": user_prompt})
+    if isinstance(user_prompt, list):
+        # Messages array sudah lengkap (termasuk system + cache_control)
+        messages = user_prompt
+    else:
+        # Backward compatible: string prompt biasa
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_prompt})
 
     last_error = None
     for attempt in range(max_retries):
