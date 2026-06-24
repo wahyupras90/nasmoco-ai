@@ -39,7 +39,7 @@ except ImportError:
 
 NAMA      = "PT. NEW RATNA MOTOR"
 EMAIL_OTP = "wahyu.prasetya@nasmoco.co.id"
-APP_PASS  = ""  # isi dari .env atau config
+SAWA_APP_PASS  = ""  # isi dari .env atau config
 
 # Global Gmail connection (persistent, login sekali)
 _mail         = None
