@@ -445,10 +445,12 @@ def save_to_excel(df: pd.DataFrame):
 # RUN — dipanggil dari sql_agent / main
 # ════════════════════════════════════════
 
-def run(no_rangka_list: list):
+def run(no_rangka_list: list, auto_confirm: bool = False):
     """
     Entry point dari AI agent.
-    no_rangka_list: list no_rangka hasil query AI.
+    no_rangka_list : list no_rangka hasil query AI.
+    auto_confirm   : True  → skip input() (dipakai oleh app.py/web)
+                     False → muncul konfirmasi keyboard seperti biasa (terminal)
     """
     if not no_rangka_list:
         print("⚠ Tidak ada no_rangka untuk diproses.")
@@ -465,9 +467,12 @@ def run(no_rangka_list: list):
     for i, nr in enumerate(no_rangka_list, 1):
         print(f"  {i:3}. {nr}")
 
-    konfirmasi = input(
-        f"\nDownload {len(no_rangka_list)} PDF Extended Warranty? (ya/tidak): "
-    ).strip().lower()
+    if auto_confirm:
+        konfirmasi = "ya"
+    else:
+        konfirmasi = input(
+            f"\nDownload {len(no_rangka_list)} PDF Extended Warranty? (ya/tidak): "
+        ).strip().lower()
 
     if konfirmasi not in ("ya", "y", "iya"):
         print("Download dibatalkan.\n")

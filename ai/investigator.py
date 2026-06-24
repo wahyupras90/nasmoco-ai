@@ -172,6 +172,37 @@ def _build_investigator_messages(user_prompt: str) -> list:
 
 
 # ════════════════════════════════════════
+# AUTO MODE — untuk app.py/web (tanpa input())
+# ════════════════════════════════════════
+
+def run_auto(pertanyaan: str, debug: bool = False) -> str:
+    """
+    Mode otomatis untuk browser — 1 call langsung ke Claude, langsung jawab.
+    Tidak ada loop, tidak ada input(), tidak ada konfirmasi.
+    """
+    from datetime import datetime
+
+    prompt = build_investigator_prompt(
+        pertanyaan        = pertanyaan,
+        ringkasan_session = "",
+        hasil_terbaru     = "",
+        user_input        = "Jawab langsung dan tulis KESIMPULAN. Jangan minta konfirmasi.",
+    )
+
+    t0       = datetime.now()
+    response = ask_ai(
+        user_prompt = _build_investigator_messages(prompt),
+        mode        = "analysis"
+    )
+    elapsed = (datetime.now() - t0).total_seconds()
+
+    if debug:
+        print(f"[run_auto] RESPON CLAUDE {elapsed:.1f} detik")
+
+    return response
+
+
+# ════════════════════════════════════════
 # RUN — entry point dari main.py
 # ════════════════════════════════════════
 

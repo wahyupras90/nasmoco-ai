@@ -62,6 +62,7 @@ LARANGAN
 - target sa='TOTAL' untuk SA | target SA untuk outlet | JOIN target BETWEEN ke transaksi harian
 - filter SCC untuk Carbon Cleaner | filter SBE km LIKE list → pakai CAST REPLACE
 - TCARE: WAJIB unit_tcare, JANGAN query unitmasuk
+- jangan filter in_tcare kecuali diminta user
 
 CONTOH
 Ranking revenue SA bulan ini:
@@ -86,6 +87,17 @@ SELECT no_rangka,customer,batas_tcare,sa_terakhir,last_sbe_km,last_sbe_date,last
 
 TCARE habis bulan X SBE<=50rb km:
 SELECT no_rangka,customer,batas_tcare,sa_terakhir,last_sbe_km,sisa_service,sisa_detail FROM unit_tcare WHERE strftime('%Y-%m',batas_tcare)='2026-06' AND (last_sbe_km IS NULL OR last_sbe_km<=50000) ORDER BY batas_tcare;
+
+WO masuk bulan sebelumnya (lintas bulan), revenue per bulan:
+WITH wo_masuk AS (
+  SELECT DISTINCT no_wo,MIN(tanggal) AS tgl_masuk FROM unitmasuk GROUP BY no_wo),
+rekap AS (
+  SELECT no_wo,strftime('%Y-%m',tanggal) AS bulan,SUM(total_revenue) AS revenue
+  FROM rekapbulanan GROUP BY no_wo,bulan)
+SELECT r.bulan,COUNT(r.no_wo) AS total_invoice,SUM(r.revenue) AS total_revenue
+FROM rekap r JOIN wo_masuk u ON r.no_wo=u.no_wo
+WHERE strftime('%Y-%m',u.tgl_masuk)!=r.bulan
+GROUP BY r.bulan ORDER BY r.bulan;
 
 Pending SBE:
 SELECT no_rangka,customer,sa_terakhir,next_sbe_expected AS wo_belum_dibuat,flag_tgl_kunjungan,flag_wo_type FROM tcare_unit WHERE flag_pending_sbe=1 ORDER BY flag_tgl_kunjungan DESC;

@@ -14,6 +14,7 @@ import sys
 import uuid
 import asyncio
 import io
+import zipfile
 from contextlib import redirect_stdout
 from datetime import datetime
 from pathlib import Path
@@ -48,8 +49,22 @@ EXCEL_KEYWORDS = [
     "export", "unduh excel", "unduh"
 ]
 
+SAWA_KEYWORDS = [
+    "extended warranty", "sawa",
+    "download warranty", "cek warranty",
+    "warranty sawa", "ambil warranty",
+    "ambil sawa", "download sawa",
+    "ambil extended", "sertifikat warranty",
+    "sertifikat sawa"
+]
+
+VIN_REGEX = r"\b[A-HJ-NPR-Z0-9]{17}\b"
+
 def need_report(text: str) -> bool:
     return any(w in text.lower() for w in LAPORAN_KEYWORDS)
+
+def need_sawa(text: str) -> bool:
+    return any(w in text.lower() for w in SAWA_KEYWORDS)
 
 def need_export(text: str) -> bool:
     return any(w in text.lower() for w in EXCEL_KEYWORDS)
@@ -60,6 +75,10 @@ def need_claude(text: str) -> bool:
 
 def need_analysis(text: str) -> bool:
     return any(w in text.lower() for w in ANALYSIS_KEYWORDS)
+
+def extract_vin_from_text(text: str) -> list:
+    """Ekstrak nomor rangka (17 digit VIN) langsung dari teks pertanyaan."""
+    return re.findall(VIN_REGEX, text.upper())
 
 
 # ════════════════════════════════════════
@@ -128,8 +147,13 @@ def run_sql_agent(pertanyaan: str, session_id: str, debug: bool = False) -> str:
     """
     from ai import sql_agent
 
-    # Inject last result milik session ini ke global sql_agent
-    sql_agent._last_result = get_last_result(session_id)
+    # Inject last result milik session ini ke module-level sql_agent
+    df_session = get_last_result(session_id)
+    sql_agent._last_result = df_session
+
+    # Log untuk verifikasi inject (selalu tampil di terminal server)
+    print(f"[SESSION {session_id[:8]}] inject _last_result: "
+          f"{len(df_session)} baris, kolom={list(df_session.columns)}")
 
     output = capture_run(sql_agent.run, pertanyaan, debug=debug)
 
@@ -139,7 +163,10 @@ def run_sql_agent(pertanyaan: str, session_id: str, debug: bool = False) -> str:
         output = '\n'.join(lines).strip()
 
     # Ambil kembali _last_result yang mungkin sudah diupdate
-    set_last_result(session_id, sql_agent._last_result)
+    new_df = sql_agent._last_result
+    set_last_result(session_id, new_df)
+    print(f"[SESSION {session_id[:8]}] simpan _last_result: "
+          f"{len(new_df)} baris, kolom={list(new_df.columns)}")
 
     return output
 
@@ -200,20 +227,49 @@ async def process_message(pertanyaan: str, session_id: str, debug: bool = False)
                 "rows": len(df),
             }
 
+        # ── SAWA / Extended Warranty ──
+        if need_sawa(pertanyaan):
+            # Coba ambil VIN dari teks pertanyaan langsung
+            vin_list = extract_vin_from_text(pertanyaan)
+
+            # Kalau tidak ada VIN di teks, ambil dari _last_result session
+            if not vin_list:
+                df = get_last_result(session_id)
+                if 'no_rangka' in df.columns and not df.empty:
+                    vin_list = df['no_rangka'].dropna().tolist()
+
+            if not vin_list:
+                return ("⚠ Tidak ada nomor rangka ditemukan.\n"
+                        "Ketik nomor rangka langsung atau jalankan query dulu.")
+
+            def _run_sawa():
+                from tools.extended_warranty import run as run_sawa
+                run_sawa(vin_list, auto_confirm=True)
+
+            await loop.run_in_executor(None, lambda: capture_run(_run_sawa))
+
+            # Kirim sinyal download ZIP ke browser
+            vins_param = ",".join(vin_list)
+            return {
+                "sawa_zip": True,
+                "vins": vins_param,
+                "count": len(vin_list),
+            }
+
         if need_report(pertanyaan):
             result = await loop.run_in_executor(None, handle_laporan, pertanyaan)
 
         elif need_claude(pertanyaan):
             q = re.sub(r'^claude[,\s]+', '', pertanyaan, flags=re.IGNORECASE).strip()
-            from ai.investigator import run as investigator_run
+            from ai.investigator import run_auto
             result = await loop.run_in_executor(
-                None, lambda: capture_run(investigator_run, q, debug=debug)
+                None, lambda: run_auto(q, debug=debug)
             )
 
         elif need_analysis(pertanyaan):
-            from ai.investigator import run as investigator_run
+            from ai.investigator import run_auto
             result = await loop.run_in_executor(
-                None, lambda: capture_run(investigator_run, pertanyaan, debug=debug)
+                None, lambda: run_auto(pertanyaan, debug=debug)
             )
 
         else:
@@ -258,13 +314,21 @@ async def chat(request: Request):
 
     result = await process_message(pertanyaan, session_id, debug)
 
-    # Export mode — kirim sinyal ke client untuk trigger download
+    # Export Excel mode
     if isinstance(result, dict) and result.get("export"):
         return JSONResponse({
             "export": True,
             "filename": result["filename"],
             "rows": result["rows"],
             "session_id": session_id,
+        })
+
+    # SAWA ZIP mode
+    if isinstance(result, dict) and result.get("sawa_zip"):
+        return JSONResponse({
+            "sawa_zip": True,
+            "vins": result["vins"],
+            "count": result["count"],
         })
 
     return JSONResponse({"response": result or "(Tidak ada output)"})
@@ -282,6 +346,49 @@ async def download_excel(session_id: str, filename: str = "nasmoco.xlsx"):
     return StreamingResponse(
         io.BytesIO(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/download-sawa-zip")
+async def download_sawa_zip(vins: str = ""):
+    """
+    Zip semua PDF SAWA yang sudah didownload dan stream ke browser.
+    vins: comma-separated list VIN untuk filter (kosong = semua PDF di folder)
+    """
+    from pathlib import Path
+
+    PDF_FOLDER = Path(r"D:\AI_nasmoco\Output\Sawa\PDF")
+    if not PDF_FOLDER.exists():
+        return JSONResponse({"error": "Folder PDF tidak ditemukan"}, status_code=404)
+
+    # Filter berdasarkan VIN kalau ada
+    vin_list = [v.strip() for v in vins.split(",") if v.strip()] if vins else []
+
+    if vin_list:
+        pdf_files = []
+        for vin in vin_list:
+            matches = list(PDF_FOLDER.glob(f"{vin}*.pdf"))
+            pdf_files.extend(matches)
+    else:
+        pdf_files = list(PDF_FOLDER.glob("*.pdf"))
+
+    if not pdf_files:
+        return JSONResponse({"error": "Tidak ada PDF ditemukan"}, status_code=404)
+
+    # Buat ZIP in-memory
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for pdf_path in pdf_files:
+            zf.write(pdf_path, pdf_path.name)
+    zip_buf.seek(0)
+
+    ts       = datetime.now().strftime("%Y%m%d_%H%M")
+    filename = f"sawa_{ts}.zip"
+
+    return StreamingResponse(
+        zip_buf,
+        media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -593,7 +700,7 @@ CHAT_HTML = """<!DOCTYPE html>
 </div>
 
 <script>
-  // ── Session ID unik per tab ──
+  // Session ID unik per tab
   const SESSION_ID = 'sess_' + Math.random().toString(36).slice(2, 10);
   let debugMode = false;
   let isLoading = false;
@@ -695,22 +802,62 @@ CHAT_HTML = """<!DOCTYPE html>
           debug: debugMode
         })
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        removeTyping();
+        addMsg('ai', '\u26a0 Server error - response bukan JSON. Cek terminal server.');
+        return;
+      }
       removeTyping();
 
-      // ── Mode export: tampilkan tombol download ──
-      if (data.export) {
+      if (!res.ok) {
+        addMsg('ai', '\u26a0 Server error: ' + (data.detail || JSON.stringify(data)));
+      } else if (data.export) {
         addExportMsg(data.filename, data.rows, data.session_id);
+      } else if (data.sawa_zip) {
+        addSawaMsg(data.vins, data.count);
       } else {
-        addMsg('ai', data.response);
+        addMsg('ai', data.response || '(Tidak ada output)');
       }
 
     } catch (err) {
       removeTyping();
-      addMsg('ai', '⚠ Gagal menghubungi server: ' + err.message);
+      const msg = err && err.message ? err.message : String(err);
+      addMsg('ai', '\u26a0 Error: ' + msg);
     } finally {
       isLoading = false;
     }
+  }
+
+  function addSawaMsg(vins, count) {
+    const chat = document.getElementById('chat');
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+
+    const url = `/download-sawa-zip?vins=${encodeURIComponent(vins)}`;
+
+    const div = document.createElement('div');
+    div.className = 'msg ai';
+    div.innerHTML = `
+      <div class="bubble">
+        &#x2705; Sertifikat SAWA selesai didownload &mdash; <strong>${count}</strong> unit.<br>
+        <a class="dl-btn" href="${url}" download>
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Download ZIP
+        </a>
+      </div>
+      <div class="msg-time">${now()}</div>
+    `;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+
+    // Auto-trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    a.click();
   }
 
   function addExportMsg(filename, rows, sessionId) {
@@ -724,7 +871,7 @@ CHAT_HTML = """<!DOCTYPE html>
     div.className = 'msg ai';
     div.innerHTML = `
       <div class="bubble">
-        ✅ Siap di-download — <strong>${rows.toLocaleString('id-ID')}</strong> baris data.<br>
+        &#x2705; Siap di-download &mdash; <strong>${rows.toLocaleString('id-ID')}</strong> baris data.<br>
         <a class="dl-btn" href="${url}" download="${filename}">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           Download Excel
