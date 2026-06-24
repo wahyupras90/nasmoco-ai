@@ -21,6 +21,13 @@ from db.query import run_query
 SQL_PROMPT    = Path("prompts/sql_prompt.txt").read_text(encoding="utf-8")
 SYSTEM_PROMPT = Path("prompts/system_prompt.txt").read_text(encoding="utf-8")
 
+# RAG builder untuk Qwen — pilih chunk sesuai pertanyaan
+try:
+    from ai.rag_builder import build_prompt as rag_build_prompt
+    USE_RAG = True
+except ImportError:
+    USE_RAG = False
+
 
 # ════════════════════════════════════════
 # ROUTING KEYWORDS
@@ -339,8 +346,9 @@ TCARE_KEYWORDS = ['tcare', 'batas_tcare', 'sbe terakhir',
 
 def build_sql_prompt(pertanyaan: str) -> list:
     """
-    Return messages array dengan cache_control pada SQL_PROMPT (statis).
-    TCARE hint dan pertanyaan user tetap di user message (dinamis, tidak di-cache).
+    RAG mode (Qwen): pilih chunk sesuai pertanyaan.
+    Fallback ke sql_prompt.txt penuh kalau rag_builder tidak ada.
+    TCARE hint tetap diinjeksi ke user message.
     """
     tcare_hint = ""
     if any(k in pertanyaan.lower() for k in TCARE_KEYWORDS):
@@ -351,6 +359,12 @@ def build_sql_prompt(pertanyaan: str) -> list:
             "FROM unit_tcare WHERE ...\n\n"
         )
 
+    # Pilih prompt — RAG atau full
+    if USE_RAG:
+        prompt_text = rag_build_prompt(pertanyaan)
+    else:
+        prompt_text = SQL_PROMPT
+
     user_content = (
         f"{tcare_hint}"
         f"Pertanyaan user:\n{pertanyaan}\n\n"
@@ -359,18 +373,8 @@ def build_sql_prompt(pertanyaan: str) -> list:
 
     return [
         {
-            "role": "system",
-            "content": [
-                {
-                    "type": "text",
-                    "text": SQL_PROMPT,
-                    "cache_control": {"type": "ephemeral"}
-                }
-            ]
-        },
-        {
             "role": "user",
-            "content": user_content
+            "content": prompt_text + "\n\n" + user_content
         }
     ]
 
@@ -431,8 +435,9 @@ def run(pertanyaan: str, debug: bool = False):
     messages_sql = build_sql_prompt(pertanyaan)
     if debug:
         # Hitung total panjang konten untuk debug
-        total_len = len(SQL_PROMPT) + len(pertanyaan)
-        print(f"PROMPT LENGTH = {total_len} (SQL_PROMPT cached)")
+        total_len = len("".join(str(m.get("content","")) for m in messages_sql))
+        label = "RAG" if USE_RAG else "SQL_PROMPT cached"
+        print(f"PROMPT LENGTH = {total_len} ({label})")
 
     t0      = datetime.now()
     raw_sql = ask_ai(messages_sql, mode="sql")

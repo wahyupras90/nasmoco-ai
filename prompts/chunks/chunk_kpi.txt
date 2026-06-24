@@ -1,0 +1,18 @@
+RULE KPI
+SA query → filter is_counter=0 | Outlet → SUM global 1 baris, JANGAN GROUP BY sa, target WHERE sa='TOTAL'
+CPUS dari rekapbulanan: SUM(CASE WHEN kategori IN('SBE','GRP','LUB','TCARE') THEN 1 ELSE 0 END)
+REV/CPUS: SUM(revenue)*1.0/NULLIF(SUM(cpus),0)
+Bulanan: strftime('%Y-%m',tanggal) | bulan ini=strftime('%Y-%m','now')
+JOIN target SA: AND t.bulan=CAST(strftime('%m',d.tanggal) AS INTEGER) AND t.tipe=CASE WHEN d.sa='KHA' THEN 'TMS' ELSE 'GR' END
+
+CONTOH KPI
+Ranking revenue SA bulan ini:
+SELECT sa,SUM(revenue) AS revenue FROM daily_kpi WHERE is_counter=0 AND strftime('%Y-%m',tanggal)=strftime('%Y-%m','now') GROUP BY sa ORDER BY revenue DESC;
+
+Pencapaian vs target bulan ini:
+SELECT d.sa,SUM(d.revenue) AS revenue,t.target_revenue,ROUND(SUM(d.revenue)*100.0/NULLIF(t.target_revenue,0),1) AS pct_rev,SUM(d.cpus) AS cpus,t.target_cpus,ROUND(SUM(d.cpus)*100.0/NULLIF(t.target_cpus,0),1) AS pct_cpus
+FROM daily_kpi d JOIN target_bulanan t ON d.sa=t.sa AND t.tahun=CAST(strftime('%Y','now') AS INTEGER) AND t.bulan=CAST(strftime('%m','now') AS INTEGER) AND t.tipe=CASE WHEN d.sa='KHA' THEN 'TMS' ELSE 'GR' END
+WHERE d.is_counter=0 AND strftime('%Y-%m',d.tanggal)=strftime('%Y-%m','now') GROUP BY d.sa ORDER BY revenue DESC;
+
+Unit masuk bulan ini per SA:
+SELECT sa,COUNT(DISTINCT no_wo) AS unit_masuk FROM unitmasuk WHERE strftime('%Y-%m',tanggal)=strftime('%Y-%m','now') GROUP BY sa ORDER BY unit_masuk DESC;

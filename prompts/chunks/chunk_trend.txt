@@ -1,0 +1,24 @@
+RULE TREND & PERIODE
+Bulanan: strftime('%Y-%m',tanggal) | Tahunan: strftime('%Y',tanggal)
+bulan ini=strftime('%Y-%m','now') | bulan lalu=strftime('%Y-%m',date('now','-1 month'))
+YTM: WHERE strftime('%Y',tanggal)=strftime('%Y','now') AND strftime('%Y-%m',tanggal)<=strftime('%Y-%m','now')
+JOIN target YTM → CTE dulu:
+WITH target_ytm AS (
+  SELECT sa,SUM(target_revenue) AS target_revenue,SUM(target_cpus) AS target_cpus,SUM(target_liter) AS target_liter
+  FROM target_bulanan WHERE tahun=CAST(strftime('%Y','now') AS INTEGER) AND bulan<=CAST(strftime('%m','now') AS INTEGER)
+  AND tipe=CASE WHEN sa='KHA' THEN 'TMS' ELSE 'GR' END GROUP BY sa)
+
+CONTOH TREND
+CPUS bulan ini vs bulan lalu per SA:
+SELECT sa,SUM(CASE WHEN strftime('%Y-%m',tanggal)=strftime('%Y-%m','now') THEN cpus ELSE 0 END) AS cpus_ini,SUM(CASE WHEN strftime('%Y-%m',tanggal)=strftime('%Y-%m',date('now','-1 month')) THEN cpus ELSE 0 END) AS cpus_lalu FROM daily_kpi WHERE is_counter=0 AND strftime('%Y-%m',tanggal) IN (strftime('%Y-%m','now'),strftime('%Y-%m',date('now','-1 month'))) GROUP BY sa ORDER BY cpus_ini DESC;
+
+WO masuk bulan sebelumnya (lintas bulan):
+WITH wo_masuk AS (
+  SELECT DISTINCT no_wo,MIN(tanggal) AS tgl_masuk FROM unitmasuk GROUP BY no_wo),
+rekap AS (
+  SELECT no_wo,strftime('%Y-%m',tanggal) AS bulan,SUM(total_revenue) AS revenue
+  FROM rekapbulanan GROUP BY no_wo,bulan)
+SELECT r.bulan,COUNT(r.no_wo) AS total_invoice,SUM(r.revenue) AS total_revenue
+FROM rekap r JOIN wo_masuk u ON r.no_wo=u.no_wo
+WHERE strftime('%Y-%m',u.tgl_masuk)!=r.bulan
+GROUP BY r.bulan ORDER BY r.bulan;

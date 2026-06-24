@@ -1,0 +1,11 @@
+PARTS & SUBLET
+TGP=Toyota Genuine Parts: scc LIKE 'TGP%'|'TLS%'|'TGG%'|'BP%'|'TGD%'
+TMO=Motor Oil (SYNTHETIC/FULL, BENSIN/DIESEL): scc LIKE 'TMO%'|'TMF%'|'TMS%'|'LEO%'
+ADT=Aditif: scc LIKE 'ADT%' | NGP=Non Genuine: scc LIKE 'NGP%'|'NGO%'|'NOO%'
+BAN=Ban | TGB=Battery | SST=Special Tools
+Carbon Cleaner: filter UPPER(nama_barang) LIKE '%CARBON%' (bisa SCC=ADT atau NGP, jangan filter SCC)
+Sublet: nilai rupiah→rekapbulanan.sublet | jenis→unitmasuk.sublet_type | BUKAN dari bufferparts
+
+CONTOH PARTS
+Carbon Cleaner per bulan per SA:
+SELECT strftime('%Y-%m',tgl_faktur) AS bulan,sa,SUM(qty) AS total_qty FROM bufferparts WHERE UPPER(nama_barang) LIKE '%CARBON%' GROUP BY bulan,sa ORDER BY bulan,sa;

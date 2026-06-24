@@ -1,0 +1,15 @@
+RULE TCARE
+SBE: 'SERVIS BERKALA 10.000 KM' | 1K=1st,10K=2nd,20K=3rd,30K=4th,40K=5th,50K=6th,60K=7th
+Filter km SBE: CAST(REPLACE(REPLACE(REPLACE(pekerjaan,'SERVIS BERKALA ',''),'.',''),' KM','') AS INTEGER)
+SA terakhir: ROW_NUMBER() OVER(PARTITION BY no_rangka ORDER BY tgl_invoice DESC,no_wo DESC)=1
+ATAU ambil dari unit_tcare.sa_terakhir (lebih efisien)
+
+CONTOH TCARE
+TCARE habis bulan ini + SBE terakhir:
+SELECT no_rangka,customer,batas_tcare,sa_terakhir,last_sbe_km,last_sbe_date,last_sbe_dealer,sisa_service,sisa_detail FROM unit_tcare WHERE strftime('%Y-%m',batas_tcare)=strftime('%Y-%m','now') ORDER BY batas_tcare;
+
+TCARE habis bulan X SBE<=50rb km:
+SELECT no_rangka,customer,batas_tcare,sa_terakhir,last_sbe_km,sisa_service,sisa_detail FROM unit_tcare WHERE strftime('%Y-%m',batas_tcare)='2026-07' AND (last_sbe_km IS NULL OR last_sbe_km<=50000) ORDER BY batas_tcare;
+
+Pending SBE (WO belum dibuat):
+SELECT no_rangka,customer,sa_terakhir,next_sbe_expected AS wo_belum_dibuat,flag_tgl_kunjungan,flag_wo_type FROM tcare_unit WHERE flag_pending_sbe=1 ORDER BY flag_tgl_kunjungan DESC;
