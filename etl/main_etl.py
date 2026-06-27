@@ -26,7 +26,7 @@ from ETL_update_alamat import (
     parse_satu_parts,
 )
 from etl_rs         import run as run_rs
-from etl_tcare_unit import run as run_tcare_unit
+from etl_tcare_unit import run as run_tcare_unit, run_tcare_unit_daily
 
 
 def run_all():
@@ -123,9 +123,11 @@ if __name__ == '__main__':
 
     if args.daily:
         print("\n▶ Mode: HARIAN")
-        # Hanya ETL_update_alamat (unitmasuk, rekapbulanan, daily_kpi, bufferparts)
+        # ETL_update_alamat (unitmasuk, rekapbulanan, daily_kpi, bufferparts)
         from ETL_update_alamat import run as run_daily
         run_daily()
+        # Update tcare_unit ringan (patch WO baru saja)
+        run_tcare_unit_daily()
     elif args.monthly:
         print("\n▶ Mode: BULANAN")
         # Baca Mapping Cust RAW sekali, share ke kedua modul
