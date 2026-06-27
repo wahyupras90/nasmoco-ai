@@ -175,6 +175,7 @@ def _process_mapping_cust(df_raw: pd.DataFrame) -> pd.DataFrame:
         'model_map':          df['NAMA MODEL'].str.strip().values    if 'NAMA MODEL'    in df.columns else None,
         'tgl_do_map':         tgl_do_map.values if tgl_do_map is not None else None,
         'dealer_penjual_map': df['Dealer Penjual'].values if 'Dealer Penjual' in df.columns else None,
+        'kota_map':           df['KOTA'].str.strip().values if 'KOTA' in df.columns else None,
     })
     return result
 
@@ -366,10 +367,16 @@ def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
         if col not in master.columns:
             master[col] = None
 
+    # ── kota dari Mapping Cust ──
+    if 'kota' not in master.columns:
+        master['kota'] = None
+    if 'kota_map' in master.columns:
+        master['kota'] = master['kota'].fillna(master['kota_map'])
+
     final_cols = [
         'no_rangka', 'customer', 'tgl_do', 'no_polisi', 'telp_gsm',
         'nama_sales', 'batas_tcare', 'in_tcare', 'sisa_bulan_tcare',
-        'kecamatan', 'kabupaten', 'dealer_penjual', 'dealer_kategori',
+        'kecamatan', 'kabupaten', 'kota', 'dealer_penjual', 'dealer_kategori',
     ]
     master = master[final_cols].copy()
     master = master.drop_duplicates(subset=['no_rangka'], keep='first')

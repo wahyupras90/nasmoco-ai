@@ -8,8 +8,9 @@ rekapbulanan: tanggal,no_wo,sa,model,kategori,is_counter,invoice,jasa,sublet,tgp
   ⚠ pakai total_revenue (bukan revenue, tidak ada kolom cpus)
 unitmasuk: tanggal,tgl_invoice,no_wo,no_rangka,no_polisi,customer,model,sa,mech,pekerjaan,kelompok,kategori,tcare,sublet_type,rate,arate,is_own,tgl_bpk,batas_tcare,in_tcare
   tanggal=masuk, tgl_invoice=invoice, mech=mekanik, rate=target jasa, arate=aktual jasa
-rs: no_rangka,customer,tgl_do,no_polisi,telp_gsm,nama_sales,batas_tcare,in_tcare,sisa_bulan_tcare,kecamatan,kabupaten,dealer_penjual,dealer_kategori
-  dealer_kategori: OWN/BERKAH | filter area: WHERE UPPER(kecamatan) LIKE '%BUMIAYU%'
+rs: no_rangka,customer,tgl_do,no_polisi,telp_gsm,nama_sales,batas_tcare,in_tcare,sisa_bulan_tcare,kecamatan,kabupaten,kota,dealer_penjual,dealer_kategori
+  dealer_kategori: OWN/BERKAH | OWN→filter kecamatan/kabupaten | BERKAH→filter kota
+  filter area: WHERE UPPER(kecamatan) LIKE '%BUMIAYU%' (OWN) atau WHERE UPPER(kota) LIKE '%PEMALANG%' (BERKAH)
 target_bulanan: tahun,bulan,bulan_nama,sa,tipe,target_cpus,target_revenue,target_liter
   tipe: GR=reguler, TMS=KHA, ALL/sa=TOTAL=outlet
 bufferparts: tgl_faktur,no_wo,kode_item,nama_barang,scc,qty,invoice,total_liter,sa,oli_tipe,oli_jenis
@@ -36,5 +37,6 @@ LARANGAN
 - revenue di rekapbulanan | GROUP BY sa untuk outlet | GROUP BY tanggal untuk bulanan/YTM
 - target sa='TOTAL' untuk SA | target SA untuk outlet | JOIN target BETWEEN ke transaksi harian
 - filter SCC untuk Carbon Cleaner | filter SBE km LIKE list → pakai CAST REPLACE
-- TCARE: WAJIB unit_tcare, JANGAN query unitmasuk
-- jangan filter in_tcare kecuali diminta user
+- TCARE monitoring (sisa, expired, sa terakhir, last SBE) → WAJIB unit_tcare
+- TCARE history WO / kunjungan → boleh dari unitmasuk
+- in_tcare: 1=aktif, 0=expired → pakai kalau user menyebut "aktif" atau "expired"

@@ -87,7 +87,7 @@ def connect_gmail(force=False):
     _mail = imaplib.IMAP4_SSL("mail.nasmoco.co.id")
     _mail.login(EMAIL_OTP, APP_PASS.replace(" ", ""))
     _gmail_ready = True
-    print("  Gmail connected")
+    print("  Mail connected")
 
 
 def get_last_email_id() -> bytes:
@@ -154,7 +154,7 @@ def ambil_otp(last_id_awal: bytes) -> str:
 def _login_otp(page):
     global _gmail_ready
     if not _gmail_ready:
-        raise Exception("Butuh OTP tapi Gmail tidak tersedia")
+        raise Exception("Butuh OTP tapi Mail tidak tersedia")
 
     page.get_by_placeholder("Name").fill(NAMA)
     page.wait_for_timeout(1000)
@@ -197,6 +197,19 @@ def download_satu(page, vin: str) -> tuple:
     page.wait_for_timeout(1000)
     page.get_by_role("button", name="Lanjut").click()
     page.wait_for_timeout(3000)
+
+    # Cek pesan error setelah klik Lanjut pertama
+    try:
+        belum_terdaftar = (
+            page.locator("text=Program belum terdaftar").count() > 0
+            or page.locator("text=belum terdaftar").count() > 0
+        )
+        if belum_terdaftar:
+            print(f"  {vin} → Program belum terdaftar, skip")
+            return "Skipped", "Program belum terdaftar", str(file_path)
+    except Exception:
+        pass
+
     page.get_by_role("button", name="Lanjut").click()
     page.wait_for_timeout(6000)
 
