@@ -472,6 +472,20 @@ def run(paths: dict = None, map_cache=None):
           f"({int(flag_n)} pending SBE) — {elapsed:.1f} detik")
 
     # ── Build tcare_schedule + tcare_monthly ──
+    rebuild_tcare_monthly()
+
+
+
+# ════════════════════════════════════════
+# REBUILD TCARE SCHEDULE + MONTHLY
+# ════════════════════════════════════════
+
+def rebuild_tcare_monthly():
+    """
+    Rebuild tcare_schedule dan tcare_monthly dari DB.
+    Dipanggil dari run() (monthly) dan run_tcare_unit_daily() (daily).
+    Tidak baca file eksternal — hanya dari rs dan unitmasuk.
+    """
     conn = sqlite3.connect(DB_PATH)
     try:
         df_schedule = build_tcare_schedule(conn)
@@ -491,7 +505,6 @@ def run(paths: dict = None, map_cache=None):
                 conn.commit()
     finally:
         conn.close()
-
 
 # ════════════════════════════════════════
 # TCARE SCHEDULE — detail per unit per kunjungan
@@ -526,13 +539,14 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     # Ambil realisasi TCARE dari unitmasuk
     df_real = pd.read_sql("""
-        SELECT no_rangka, no_wo, sa, tgl_invoice
+        SELECT no_rangka, no_wo, sa, tanggal, tgl_invoice
         FROM unitmasuk
         WHERE tcare = 'TCARE'
           AND no_rangka IS NOT NULL
     """, conn)
+    df_real['tanggal']     = pd.to_datetime(df_real['tanggal'], errors='coerce')
     df_real['tgl_invoice'] = pd.to_datetime(df_real['tgl_invoice'], errors='coerce')
-    df_real['bulan_real']  = df_real['tgl_invoice'].dt.strftime('%Y-%m')
+    df_real['bulan_real']  = df_real['tanggal'].dt.strftime('%Y-%m')
 
     # Generate 6 kunjungan per unit (vectorized via concat)
     rows = []
@@ -542,7 +556,9 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
         sub['pekerjaan']    = KUNJUNGAN_LABEL[kunjungan]
         sub['bulan_jadwal'] = (sub['tgl_do'] + pd.DateOffset(months=bulan_tambah)).dt.strftime('%Y-%m')
         sub['tgl_jadwal']   = sub['tgl_do'] + pd.DateOffset(months=bulan_tambah)
-        sub['expired']      = (sub['tgl_jadwal'] < today).astype(int)
+        sub['expired'] = (
+            sub['tgl_jadwal'].dt.to_period('M') < pd.Timestamp.today().to_period('M')
+        ).astype(int)
         rows.append(sub)
 
     schedule = pd.concat(rows, ignore_index=True)
@@ -560,8 +576,8 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
     df_real2 = df_real.merge(df_rs_do, on='no_rangka', how='left')
     df_real2 = df_real2.dropna(subset=['tgl_do'])
     df_real2['bulan_offset'] = (
-        (df_real2['tgl_invoice'].dt.year  - df_real2['tgl_do'].dt.year) * 12 +
-        (df_real2['tgl_invoice'].dt.month - df_real2['tgl_do'].dt.month)
+        (df_real2['tanggal'].dt.year  - df_real2['tgl_do'].dt.year) * 12 +
+        (df_real2['tanggal'].dt.month - df_real2['tgl_do'].dt.month)
     )
 
     # Tentukan kunjungan ke berapa berdasarkan bulan_offset
@@ -938,6 +954,9 @@ def run_tcare_unit_daily():
     conn.execute('CREATE INDEX IF NOT EXISTS idx_tcu_rangka ON tcare_unit(no_rangka)')
     conn.commit()
     conn.close()
+
+    # ── G. Rebuild tcare_schedule + tcare_monthly ──
+    rebuild_tcare_monthly()
 
     elapsed = (datetime.now() - t0).total_seconds()
     flag_n  = df_tcu['flag_pending_sbe'].sum()

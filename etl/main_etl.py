@@ -26,7 +26,7 @@ from ETL_update_alamat import (
     parse_satu_parts,
 )
 from etl_rs         import run as run_rs
-from etl_tcare_unit import run as run_tcare_unit, run_tcare_unit_daily
+from etl_tcare_unit import run as run_tcare_unit, run_tcare_unit_daily, rebuild_tcare_monthly
 
 
 def run_all():
