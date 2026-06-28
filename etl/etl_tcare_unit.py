@@ -233,19 +233,16 @@ def load_wo_non_sbe() -> pd.DataFrame:
 # ════════════════════════════════════════
 
 def get_tcare_type(row) -> str:
+    # Prioritas 1: dari T-CARE Nasional
     if pd.notna(row.get('tcare_type_tc')):
         return row['tcare_type_tc']
-    batas = row.get('batas_tcare')
-    if pd.notna(batas) and batas:
-        try:
-            if pd.to_datetime(batas) >= pd.Timestamp.today():
-                model = str(row.get('model', '') or '').upper()
-                if 'AGYA'   in model: return 'T-CARE LITE+'
-                if 'CALYA'  in model: return 'T-CARE LITE'
-                if 'RANGGA' in model: return 'RANGGA'
-                return 'T-CARE'
-        except Exception:
-            pass
+    # Prioritas 2: dari model (aktif maupun expired)
+    model = str(row.get('model', '') or '').upper()
+    if model and model != 'NAN':
+        if 'AGYA'   in model: return 'T-CARE LITE+'
+        if 'CALYA'  in model: return 'T-CARE LITE'
+        if 'RANGGA' in model: return 'RANGGA'
+        return 'T-CARE'
     return None
 
 

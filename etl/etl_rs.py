@@ -374,7 +374,7 @@ def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
         master['kota'] = master['kota'].fillna(master['kota_map'])
 
     final_cols = [
-        'no_rangka', 'customer', 'tgl_do', 'no_polisi', 'telp_gsm',
+        'no_rangka', 'customer', 'model', 'tgl_do', 'no_polisi', 'telp_gsm',
         'nama_sales', 'batas_tcare', 'in_tcare', 'sisa_bulan_tcare',
         'kecamatan', 'kabupaten', 'kota', 'dealer_penjual', 'dealer_kategori',
     ]
