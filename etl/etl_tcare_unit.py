@@ -534,9 +534,9 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     today = pd.Timestamp.today().normalize()
 
-    # Ambil realisasi TCARE dari unitmasuk
+    # Ambil realisasi TCARE dari unitmasuk (include pekerjaan untuk mapping km → kunjungan)
     df_real = pd.read_sql("""
-        SELECT no_rangka, no_wo, sa, tanggal, tgl_invoice
+        SELECT no_rangka, no_wo, sa, tanggal, tgl_invoice, pekerjaan
         FROM unitmasuk
         WHERE tcare = 'TCARE'
           AND no_rangka IS NOT NULL
@@ -577,33 +577,44 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
         (df_real2['tanggal'].dt.month - df_real2['tgl_do'].dt.month)
     )
 
-    # Tentukan kunjungan ke berapa berdasarkan bulan_offset
-    # kunjungan 1=6bln, 2=12bln, 3=18bln, 4=24bln, 5=30bln, 6=36bln
-    # Early: offset < jadwal, Late: offset > jadwal
-    def map_kunjungan(offset):
+    # Tentukan kunjungan ke berapa berdasarkan KM AKTUAL (dari pekerjaan)
+    # Prioritas km aktual > bulan_offset untuk menghindari salah mapping
+    # KM_TO_SERVICE: {1000:1, 10000:2, 20000:3, 30000:4, 40000:5, 50000:6, 60000:7}
+    # Tapi TCARE hanya 6 kunjungan (10K-60K), jadi:
+    # kunjungan 1=10K, 2=20K, 3=30K, 4=40K, 5=50K, 6=60K
+    KM_TO_KUNJUNGAN = {10000:1, 20000:2, 30000:3, 40000:4, 50000:5, 60000:6}
+    KUNJUNGAN_TO_KM = {v:k for k,v in KM_TO_KUNJUNGAN.items()}
+
+    df_real2['km_actual'] = extract_km_series(df_real2['pekerjaan'])
+
+    def map_kunjungan_km(row):
+        """Prioritas: km aktual → bulan_offset sebagai fallback."""
+        km = row.get('km_actual')
+        if pd.notna(km) and int(km) in KM_TO_KUNJUNGAN:
+            return KM_TO_KUNJUNGAN[int(km)]
+        # Fallback: bulan_offset
+        offset = row.get('bulan_offset')
         if pd.isna(offset):
             return None
         for k, bln in KUNJUNGAN_BULAN.items():
             if offset <= bln:
                 return k
-        return 6  # lebih dari 36 bulan → kunjungan 6
+        return 6
 
-    df_real2['kunjungan_real'] = df_real2['bulan_offset'].apply(map_kunjungan)
+    df_real2['kunjungan_real'] = df_real2.apply(map_kunjungan_km, axis=1)
 
-    # Tentukan status punctual/early/late
+    # Tentukan status punctual/early/late berdasarkan bulan_offset vs jadwal kunjungan
     def get_status(row):
-        if pd.isna(row['bulan_offset']) or row['kunjungan_real'] is None:
+        kunjungan = row.get('kunjungan_real')
+        if kunjungan is None or pd.isna(row.get('bulan_offset')):
             return 'unknown'
-        jadwal_bln = KUNJUNGAN_BULAN.get(row['kunjungan_real'], None)
+        jadwal_bln = KUNJUNGAN_BULAN.get(kunjungan)
         if jadwal_bln is None:
             return 'unknown'
         diff = row['bulan_offset'] - jadwal_bln
-        if diff == 0:
-            return 'punctual'
-        elif diff < 0:
-            return 'early'
-        else:
-            return 'late'
+        if diff == 0:   return 'punctual'
+        elif diff < 0:  return 'early'
+        else:           return 'late'
 
     df_real2['status_real'] = df_real2.apply(get_status, axis=1)
 
