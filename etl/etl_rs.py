@@ -243,6 +243,26 @@ def load_nopol_from_unitmasuk() -> pd.DataFrame:
 # BUILD RS TABLE
 # ════════════════════════════════════════
 
+def _get_segment(model) -> str:
+    """Tentukan segment dari nama model."""
+    if not model or str(model).strip().upper() == 'NAN':
+        return 'Other'
+    m = str(model).upper()
+    if any(k in m for k in ['AGYA', 'CALYA']):
+        return 'New Entry'
+    if any(k in m for k in ['AVANZA', 'VELOZ', 'RUSH', 'RAIZE']):
+        return 'Economy'
+    if any(k in m for k in ['INNOVA', 'ZENIX', 'YARIS', 'HILUX', 'HIACE', 'VIOS', 'SIENTA']):
+        return 'Standard'
+    if any(k in m for k in ['FORTUNER', 'VOXY', 'COROLLA', 'CHR', 'C-HR']):
+        return 'Medium Luxury'
+    if any(k in m for k in ['ALPHARD', 'LAND CRUISER', 'LANDCRUISER']):
+        return 'Luxury'
+    if 'DYNA' in m:
+        return 'Commercial'
+    return 'Other'
+
+
 def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
     """Gabungkan semua sumber menjadi master unit.
     
@@ -373,8 +393,11 @@ def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
     if 'kota_map' in master.columns:
         master['kota'] = master['kota'].fillna(master['kota_map'])
 
+    # ── segment dari model ──
+    master['segment'] = master['model'].apply(_get_segment)
+
     final_cols = [
-        'no_rangka', 'customer', 'model', 'tgl_do', 'no_polisi', 'telp_gsm',
+        'no_rangka', 'customer', 'model', 'segment', 'tgl_do', 'no_polisi', 'telp_gsm',
         'nama_sales', 'batas_tcare', 'in_tcare', 'sisa_bulan_tcare',
         'kecamatan', 'kabupaten', 'kota', 'dealer_penjual', 'dealer_kategori',
     ]
