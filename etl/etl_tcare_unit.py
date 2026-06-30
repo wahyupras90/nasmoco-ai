@@ -582,22 +582,23 @@ def run(paths: dict = None, map_cache=None):
           f"({int(flag_n)} pending SBE) — {elapsed:.1f} detik")
 
     # ── Build tcare_schedule + tcare_monthly ──
-    rebuild_tcare_monthly()
+    rebuild_tcare_monthly(df_map_cache=map_cache)
 
 
 # ════════════════════════════════════════
 # REBUILD TCARE SCHEDULE + MONTHLY
 # ════════════════════════════════════════
 
-def rebuild_tcare_monthly():
+def rebuild_tcare_monthly(df_map_cache=None):
     """
     Rebuild tcare_schedule dan tcare_monthly dari DB.
     Dipanggil dari run() (monthly) dan run_tcare_unit_daily() (daily).
-    Tidak baca file eksternal — hanya dari rs dan unitmasuk.
+    Realisasi digabung dari unitmasuk + Mapping Cust + T-CARE Nasional.
+    df_map_cache: opsional raw DataFrame Mapping Cust (untuk skip baca file ulang).
     """
     conn = sqlite3.connect(DB_PATH)
     try:
-        df_schedule = build_tcare_schedule(conn)
+        df_schedule = build_tcare_schedule(conn, df_map_cache=df_map_cache)
         if len(df_schedule) > 0:
             df_schedule.to_sql('tcare_schedule', conn,
                                if_exists='replace', index=False)
@@ -624,12 +625,141 @@ KUNJUNGAN_BULAN = {1: 6, 2: 12, 3: 18, 4: 24, 5: 30, 6: 36}  # kunjungan ke-N �
 KUNJUNGAN_LABEL = {1: '10K', 2: '20K', 3: '30K', 4: '40K', 5: '50K', 6: '60K'}
 
 
-def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
+def _build_realisasi_from_external(df_rs_do: pd.DataFrame, sumber: str,
+                                    df_map_cache=None) -> pd.DataFrame:
+    """
+    Ekstrak realisasi TCARE (SBE 10K-60K) dari Mapping Cust atau T-CARE Nasional.
+    Return format sama dengan df_real3: no_rangka, kunjungan, no_wo_real,
+    sa_realisasi, bulan_realisasi, status.
+
+    sumber: 'cust_map' atau 'tc_nas'
+    df_map_cache: opsional raw DataFrame Mapping Cust (untuk sumber='cust_map')
+    """
+    KM_TO_KUNJUNGAN = {10000:1, 20000:2, 30000:3, 40000:4, 50000:5, 60000:6}
+
+    if sumber == 'cust_map':
+        if df_map_cache is not None and 'No. CHASSIS' in df_map_cache.columns:
+            df = df_map_cache.copy()
+        else:
+            files = sorted(MAPPING_CUST_DIR.glob('*.csv'), reverse=True)[:2]
+            dfs = []
+            for f in files:
+                try:
+                    dfs.append(pd.read_csv(f, sep=';', encoding='latin1', low_memory=False))
+                except Exception:
+                    pass
+            if not dfs:
+                return pd.DataFrame()
+            df = pd.concat(dfs, ignore_index=True)
+
+        df['no_rangka'] = (df['No. CHASSIS']
+                           .astype(str).str.strip().str.lstrip('.').str.strip())
+        df = df[df['no_rangka'].str.len() > 5]
+        df = df[df['no_rangka'] != 'nan']
+        df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+
+        parts = []
+        for km, kunjungan in KM_TO_KUNJUNGAN.items():
+            col = f'SBE {km//1000}K'
+            dealer_col = f'Dealer {col}'
+            if col not in df.columns:
+                continue
+            mask = df[col].notna() & (df[col].astype(str).str.strip() != '')
+            sub = df.loc[mask, ['no_rangka', col]].copy()
+            if len(sub) == 0:
+                continue
+            sub['kunjungan'] = kunjungan
+            sub['tanggal'] = pd.to_datetime(sub[col], dayfirst=True, errors='coerce')
+            dealer = df.loc[sub.index, dealer_col] if dealer_col in df.columns else None
+            sub['dealer'] = dealer
+            parts.append(sub[['no_rangka', 'kunjungan', 'tanggal', 'dealer']])
+
+        if not parts:
+            return pd.DataFrame()
+        df_ext = pd.concat(parts, ignore_index=True)
+        df_ext['sumber_tag'] = 'cust_map'
+
+    elif sumber == 'tc_nas':
+        files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
+        dfs = []
+        for f in files:
+            try:
+                dfs.append(pd.read_excel(f, header=0, engine='openpyxl'))
+            except Exception:
+                pass
+        if not dfs:
+            return pd.DataFrame()
+        df = pd.concat(dfs, ignore_index=True)
+        df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
+        df = df.dropna(subset=['no_rangka'])
+        df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+
+        # 2nd-7th Service = kunjungan 1-6 (10K-60K). 1st Service = SBI, di-skip.
+        ORDINAL_TO_KUNJUNGAN = {
+            '2nd': 1, '3rd': 2, '4th': 3, '5th': 4, '6th': 5, '7th': 6,
+        }
+        parts = []
+        for ordinal, kunjungan in ORDINAL_TO_KUNJUNGAN.items():
+            col_bulan  = f'Bulan {ordinal} Service'
+            col_dealer = f'Dealer {ordinal} Service'
+            if col_bulan not in df.columns:
+                continue
+            mask = df[col_bulan].notna()
+            sub = df.loc[mask, ['no_rangka', col_bulan]].copy()
+            if len(sub) == 0:
+                continue
+            sub['kunjungan'] = kunjungan
+            sub['tanggal'] = pd.to_datetime(sub[col_bulan], dayfirst=True, errors='coerce')
+            dealer = df.loc[sub.index, col_dealer] if col_dealer in df.columns else None
+            sub['dealer'] = dealer
+            parts.append(sub[['no_rangka', 'kunjungan', 'tanggal', 'dealer']])
+
+        if not parts:
+            return pd.DataFrame()
+        df_ext = pd.concat(parts, ignore_index=True)
+        df_ext['sumber_tag'] = 'tc_nas'
+    else:
+        return pd.DataFrame()
+
+    df_ext = df_ext.dropna(subset=['tanggal'])
+    df_ext = df_ext.merge(df_rs_do, on='no_rangka', how='left')
+    df_ext = df_ext.dropna(subset=['tgl_do'])
+
+    df_ext['bulan_offset'] = (
+        (df_ext['tanggal'].dt.year  - df_ext['tgl_do'].dt.year) * 12 +
+        (df_ext['tanggal'].dt.month - df_ext['tgl_do'].dt.month)
+    )
+
+    def get_status_ext(row):
+        jadwal_bln = KUNJUNGAN_BULAN.get(row['kunjungan'])
+        if jadwal_bln is None:
+            return 'unknown'
+        diff = row['bulan_offset'] - jadwal_bln
+        if diff == 0:   return 'punctual'
+        elif diff < 0:  return 'early'
+        else:           return 'late'
+
+    df_ext['status'] = df_ext.apply(get_status_ext, axis=1)
+    df_ext['bulan_realisasi'] = df_ext['tanggal'].dt.strftime('%Y-%m')
+    df_ext['sa_realisasi'] = df_ext['dealer'].astype(str).str.strip()
+    df_ext['no_wo_real'] = (
+        df_ext['sa_realisasi'] + '/' + df_ext['sumber_tag']
+    )
+
+    return df_ext[['no_rangka', 'kunjungan', 'no_wo_real',
+                   'sa_realisasi', 'bulan_realisasi', 'status']]
+
+
+def build_tcare_schedule(conn: sqlite3.Connection,
+                         df_map_cache=None) -> pd.DataFrame:
     """
     Generate jadwal TCARE per unit per kunjungan (6 kunjungan × unit OWN+BERKAH).
     Potensi = OWN only. BERKAH masuk tapi tidak dihitung sebagai potensi.
     Unit tanpa tgl_do → exclude.
     Unit expired (>36 bulan dari tgl_do) → expired=1.
+
+    Realisasi digabung dari 3 sumber dengan prioritas:
+    unitmasuk (TCARE lokal) > Mapping Cust (SBE 10K-60K) > T-CARE Nasional.
     """
     df_rs = pd.read_sql("""
         SELECT no_rangka, dealer_kategori, tgl_do, customer
@@ -725,9 +855,32 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
         'bulan_real':     'bulan_realisasi',
         'status_real':    'status',
     })
+    df_real3 = df_real3.dropna(subset=['kunjungan'])
+    df_real3['kunjungan'] = df_real3['kunjungan'].astype(int)
+    df_real3['_priority'] = 1  # prioritas tertinggi: unitmasuk
 
-    df_real3 = df_real3.sort_values('bulan_realisasi', ascending=False)
+    # Gabung realisasi dari Mapping Cust dan T-CARE Nasional
+    df_cust_map = _build_realisasi_from_external(df_rs_do, 'cust_map', df_map_cache)
+    if len(df_cust_map) > 0:
+        df_cust_map['_priority'] = 2
+
+    df_tc_nas = _build_realisasi_from_external(df_rs_do, 'tc_nas')
+    if len(df_tc_nas) > 0:
+        df_tc_nas['_priority'] = 3
+
+    all_real = [df_real3]
+    if len(df_cust_map) > 0:
+        all_real.append(df_cust_map)
+    if len(df_tc_nas) > 0:
+        all_real.append(df_tc_nas)
+
+    df_real3 = pd.concat(all_real, ignore_index=True)
+
+    # Prioritas: unitmasuk(1) > cust_map(2) > tc_nas(3), lalu bulan_realisasi terbaru
+    df_real3 = df_real3.sort_values(['_priority', 'bulan_realisasi'],
+                                    ascending=[True, False])
     df_real3 = df_real3.drop_duplicates(subset=['no_rangka', 'kunjungan'])
+    df_real3 = df_real3.drop(columns=['_priority'])
 
     schedule = schedule.merge(df_real3, on=['no_rangka', 'kunjungan'], how='left')
 
