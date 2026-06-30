@@ -27,20 +27,18 @@ import uvicorn
 
 
 # ════════════════════════════════════════
-# LOGGING — tambah timestamp di setiap print() server
+# LOGGING — log internal server (lewat stderr, tidak pernah ke-capture)
 # ════════════════════════════════════════
 
-import builtins
-_original_print = builtins.print
-
-def _print_with_timestamp(*args, **kwargs):
+def log_server(*args, **kwargs):
+    """
+    Log internal server — selalu ke stderr, BUKAN stdout.
+    redirect_stdout (dipakai capture_run) hanya menangkap stdout, jadi log
+    lewat stderr dijamin tidak akan pernah bocor ke output yang dikirim
+    ke browser, apapun kondisi race antar request paralel.
+    """
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if args:
-        _original_print(f"[{ts}]", *args, **kwargs)
-    else:
-        _original_print(*args, **kwargs)
-
-builtins.print = _print_with_timestamp
+    print(f"[{ts}]", *args, file=sys.stderr, **kwargs)
 
 
 # ════════════════════════════════════════
@@ -153,27 +151,32 @@ def build_excel_bytes(df: pd.DataFrame) -> bytes:
 # CAPTURE STDOUT — karena run() pakai print()
 # ════════════════════════════════════════
 
+def _strip_model_lines(text: str) -> str:
+    """
+    Hapus baris 'MODEL=...' dari output, termasuk kalau ada prefix timestamp
+    menempel di depannya (terjadi kalau modul yang dipanggil sempat meng-cache
+    referensi print sebelum builtins.print di-restore ke versi asli).
+    """
+    lines = [l for l in text.splitlines() if 'MODEL=' not in l]
+    return '\n'.join(lines).strip()
+
+
 def capture_run(fn, *args, **kwargs) -> str:
     """
     Jalankan fn dan kembalikan semua output print() sebagai string.
-    Gunakan print asli (tanpa timestamp) supaya output ke browser tetap bersih;
-    timestamp hanya untuk log yang tampil di terminal server.
+    Murni redirect_stdout — tidak menyentuh builtins.print sama sekali,
+    sehingga aman untuk request paralel (tidak ada shared global state).
     """
     buf = io.StringIO()
-    builtins.print = _original_print  # nonaktifkan timestamp sementara
-    try:
-        with redirect_stdout(buf):
-            fn(*args, **kwargs)
-    finally:
-        builtins.print = _print_with_timestamp  # aktifkan lagi untuk log server
+    with redirect_stdout(buf):
+        fn(*args, **kwargs)
 
     output = buf.getvalue().strip()
 
     # Sembunyikan baris MODEL= kalau bukan debug mode
     debug = kwargs.get('debug', False)
     if not debug:
-        lines = [l for l in output.splitlines() if not l.startswith('MODEL=')]
-        output = '\n'.join(lines).strip()
+        output = _strip_model_lines(output)
 
     return output
 
@@ -194,21 +197,20 @@ def run_sql_agent(pertanyaan: str, session_id: str, debug: bool = False) -> str:
     sql_agent._last_result = df_session
 
     # Log untuk verifikasi inject (selalu tampil di terminal server)
-    print(f"[SESSION {session_id[:8]}] inject _last_result: "
-          f"{len(df_session)} baris, kolom={list(df_session.columns)}")
+    log_server(f"[SESSION {session_id[:8]}] inject _last_result: "
+               f"{len(df_session)} baris, kolom={list(df_session.columns)}")
 
     output = capture_run(sql_agent.run, pertanyaan, debug=debug)
 
     # Filter MODEL= juga di path sql_agent (capture_run sudah handle, tapi jaga-jaga)
     if not debug:
-        lines = [l for l in output.splitlines() if not l.startswith('MODEL=')]
-        output = '\n'.join(lines).strip()
+        output = _strip_model_lines(output)
 
     # Ambil kembali _last_result yang mungkin sudah diupdate
     new_df = sql_agent._last_result
     set_last_result(session_id, new_df)
-    print(f"[SESSION {session_id[:8]}] simpan _last_result: "
-          f"{len(new_df)} baris, kolom={list(new_df.columns)}")
+    log_server(f"[SESSION {session_id[:8]}] simpan _last_result: "
+               f"{len(new_df)} baris, kolom={list(new_df.columns)}")
 
     return output
 
@@ -441,9 +443,16 @@ async def chat(request: Request):
         })
 
     # Sertakan table_data kalau ada _last_result untuk session ini
+    # DAN response tidak menunjukkan "tidak ada data" — supaya tabel lama
+    # (dari query sebelumnya) tidak ikut tampil saat query terbaru kosong
     df = get_last_result(session_id)
     table_data = None
-    if not df.empty and len(df) > 1:
+    response_text = (result or "").lower()
+    no_data_signal = any(s in response_text for s in [
+        "tidak ada data", "no data", "kosong", "tidak ditemukan"
+    ])
+
+    if not df.empty and len(df) > 1 and not no_data_signal:
         # Kirim sebagai list of dicts, max 500 baris untuk performa
         table_data = {
             "columns": list(df.columns),

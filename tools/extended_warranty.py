@@ -39,7 +39,7 @@ except ImportError:
 
 NAMA      = "PT. NEW RATNA MOTOR"
 EMAIL_OTP = "wahyu.prasetya@nasmoco.co.id"
-SAWA_APP_PASS  = ""  # isi dari .env atau config
+APP_PASS  = ""  # isi dari .env atau config
 
 # Global Gmail connection (persistent, login sekali)
 _mail         = None
@@ -87,7 +87,7 @@ def connect_gmail(force=False):
     _mail = imaplib.IMAP4_SSL("mail.nasmoco.co.id")
     _mail.login(EMAIL_OTP, APP_PASS.replace(" ", ""))
     _gmail_ready = True
-    print("  Mail connected")
+    print("  Gmail connected")
 
 
 def get_last_email_id() -> bytes:
@@ -154,7 +154,7 @@ def ambil_otp(last_id_awal: bytes) -> str:
 def _login_otp(page):
     global _gmail_ready
     if not _gmail_ready:
-        raise Exception("Butuh OTP tapi Mail tidak tersedia")
+        raise Exception("Butuh OTP tapi Gmail tidak tersedia")
 
     page.get_by_placeholder("Name").fill(NAMA)
     page.wait_for_timeout(1000)
@@ -197,19 +197,6 @@ def download_satu(page, vin: str) -> tuple:
     page.wait_for_timeout(1000)
     page.get_by_role("button", name="Lanjut").click()
     page.wait_for_timeout(3000)
-
-    # Cek pesan error setelah klik Lanjut pertama
-    try:
-        belum_terdaftar = (
-            page.locator("text=Program belum terdaftar").count() > 0
-            or page.locator("text=belum terdaftar").count() > 0
-        )
-        if belum_terdaftar:
-            print(f"  {vin} → Program belum terdaftar, skip")
-            return "Skipped", "Program belum terdaftar", str(file_path)
-    except Exception:
-        pass
-
     page.get_by_role("button", name="Lanjut").click()
     page.wait_for_timeout(6000)
 
@@ -236,18 +223,30 @@ def download_satu(page, vin: str) -> tuple:
     return "Downloaded", "OK", str(file_path)
 
 
-def download_batch(vin_list: list) -> pd.DataFrame:
-    """Download PDF untuk semua VIN dalam list."""
+def download_batch(vin_list: list, on_progress=None) -> pd.DataFrame:
+    """
+    Download PDF untuk semua VIN dalam list.
+    on_progress(current, total, vin, status) : callback opsional,
+        dipanggil setiap kali 1 VIN selesai diproses (dipakai oleh app.py
+        untuk update progress polling). Tidak mengubah perilaku terminal.
+    """
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
         print("⚠ playwright tidak terinstall. Jalankan: pip install playwright")
         return pd.DataFrame()
 
+    total = len(vin_list)
     log = []
     with sync_playwright() as p:
-        for vin in vin_list:
-            print(f"\n  [{vin_list.index(vin)+1}/{len(vin_list)}] {vin}")
+        for i, vin in enumerate(vin_list, 1):
+            print(f"\n  [{i}/{total}] {vin}")
+            if on_progress:
+                try:
+                    on_progress(i, total, vin, "processing")
+                except Exception:
+                    pass  # jangan sampai progress callback ganggu proses utama
+
             retry = 0
             while retry < 2:
                 browser = None
@@ -259,6 +258,11 @@ def download_batch(vin_list: list) -> pd.DataFrame:
                     log.append({"vin": vin, "status": status, "ket": ket, "file": fp})
                     print(f"  → {status}")
                     browser.close()
+                    if on_progress:
+                        try:
+                            on_progress(i, total, vin, status)
+                        except Exception:
+                            pass
                     break
                 except Exception as e:
                     print(f"  ERROR: {e}")
@@ -268,6 +272,11 @@ def download_batch(vin_list: list) -> pd.DataFrame:
                     if retry >= 2:
                         log.append({"vin": vin, "status": "Failed",
                                     "ket": str(e), "file": ""})
+                        if on_progress:
+                            try:
+                                on_progress(i, total, vin, "Failed")
+                            except Exception:
+                                pass
 
     return pd.DataFrame(log)
 
@@ -458,12 +467,15 @@ def save_to_excel(df: pd.DataFrame):
 # RUN — dipanggil dari sql_agent / main
 # ════════════════════════════════════════
 
-def run(no_rangka_list: list, auto_confirm: bool = False):
+def run(no_rangka_list: list, auto_confirm: bool = False, on_progress=None):
     """
     Entry point dari AI agent.
     no_rangka_list : list no_rangka hasil query AI.
     auto_confirm   : True  → skip input() (dipakai oleh app.py/web)
                      False → muncul konfirmasi keyboard seperti biasa (terminal)
+    on_progress    : callback opsional(current, total, vin, status) — diteruskan
+                     ke download_batch() untuk laporan progress real-time
+                     (dipakai app.py untuk polling, tidak berdampak ke terminal)
     """
     if not no_rangka_list:
         print("⚠ Tidak ada no_rangka untuk diproses.")
@@ -493,7 +505,7 @@ def run(no_rangka_list: list, auto_confirm: bool = False):
 
     # 1. Download PDF
     print("\n📥 Download PDF...")
-    download_batch(no_rangka_list)
+    download_batch(no_rangka_list, on_progress=on_progress)
 
     # 2. Parse semua PDF di folder
     df = parse_folder(PDF_FOLDER)

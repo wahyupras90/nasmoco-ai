@@ -100,7 +100,7 @@ def load_rs_tegal(folder: str) -> pd.DataFrame:
     df = pd.concat(dfs, ignore_index=True)
     df['no_rangka'] = df['no_rangka'].apply(clean_no_rangka)
     df = df.dropna(subset=['no_rangka'])
-    df['tgl_do']    = pd.to_datetime(df['tgl_do'], errors='coerce')
+    df['tgl_do']    = pd.to_datetime(df['tgl_do'], dayfirst=True, errors='coerce')
     df = (df.sort_values('tgl_do', ascending=False)
             .drop_duplicates(subset='no_rangka', keep='first')
             .reset_index(drop=True))
@@ -339,14 +339,16 @@ def build_rs(folder: str, df_map_cache: pd.DataFrame = None) -> pd.DataFrame:
         master.get('model_map', pd.Series(dtype=str))
     )
 
-    # ── tgl_do: Prioritas 1=Tgl DEC (TAM), 2=Mapping Cust, 3=RS Tegal ──
+    # ── tgl_do: Prioritas 1=RS Tegal (DMS lokal), 2=Tgl DEC (TAM), 3=Mapping Cust ──
     if 'tgl_do' not in master.columns:
         master['tgl_do'] = None
+    master['tgl_do_own'] = master['tgl_do']  # simpan dulu nilai asli dari RS Tegal
     master['tgl_do'] = (
-        master.get('tgl_do_tc',  pd.Series(dtype=str))
+        master['tgl_do_own']
+              .fillna(master.get('tgl_do_tc',  pd.Series(dtype=str)))
               .fillna(master.get('tgl_do_map', pd.Series(dtype=str)))
-              .fillna(master.get('tgl_do',     pd.Series(dtype=str)))
     )
+    master = master.drop(columns=['tgl_do_own'], errors='ignore')
 
     # ── no_polisi: Prioritas unitmasuk → DMS ──
     if 'no_polisi' not in master.columns:
