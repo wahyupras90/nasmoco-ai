@@ -1,0 +1,2904 @@
+{
+  "schema": {
+    "bufferparts": {
+      "type": "table",
+      "rows": 175106,
+      "columns": [
+        [
+          "tgl_faktur",
+          "TEXT"
+        ],
+        [
+          "no_faktur",
+          "TEXT"
+        ],
+        [
+          "kode_cust",
+          "TEXT"
+        ],
+        [
+          "no_wo",
+          "TEXT"
+        ],
+        [
+          "kode_item",
+          "TEXT"
+        ],
+        [
+          "nama_barang",
+          "TEXT"
+        ],
+        [
+          "scc",
+          "TEXT"
+        ],
+        [
+          "satuan",
+          "TEXT"
+        ],
+        [
+          "qty",
+          "INTEGER"
+        ],
+        [
+          "disc",
+          "REAL"
+        ],
+        [
+          "invoice_dpp",
+          "INTEGER"
+        ],
+        [
+          "invoice",
+          "REAL"
+        ],
+        [
+          "harga_pokok",
+          "REAL"
+        ],
+        [
+          "laba",
+          "INTEGER"
+        ],
+        [
+          "oli_tipe",
+          "TEXT"
+        ],
+        [
+          "oli_kemasan",
+          "REAL"
+        ],
+        [
+          "oli_jenis",
+          "TEXT"
+        ],
+        [
+          "total_liter",
+          "REAL"
+        ],
+        [
+          "sa",
+          "TEXT"
+        ],
+        [
+          "pekerjaan",
+          "TEXT"
+        ]
+      ]
+    },
+    "crm_attack_list": {
+      "type": "table",
+      "rows": 8827,
+      "columns": [
+        [
+          "id",
+          "INTEGER"
+        ],
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "customer",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "segment",
+          "TEXT"
+        ],
+        [
+          "segment_rfm",
+          "TEXT"
+        ],
+        [
+          "sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "tgl_kunjungan_terakhir",
+          "TEXT"
+        ],
+        [
+          "hari_sejak_kunjungan",
+          "INTEGER"
+        ],
+        [
+          "interval_avg_hari",
+          "REAL"
+        ],
+        [
+          "avg_revenue_per_wo",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_tgp",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_adt",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_sublet",
+          "REAL"
+        ],
+        [
+          "program_id",
+          "INTEGER"
+        ],
+        [
+          "nama_program",
+          "TEXT"
+        ],
+        [
+          "alasan",
+          "TEXT"
+        ],
+        [
+          "status",
+          "TEXT"
+        ],
+        [
+          "tgl_generate",
+          "TEXT"
+        ],
+        [
+          "tgl_followup",
+          "TEXT"
+        ]
+      ]
+    },
+    "customer_profile": {
+      "type": "table",
+      "rows": 47797,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "customer",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "segment",
+          "TEXT"
+        ],
+        [
+          "dealer_kategori",
+          "TEXT"
+        ],
+        [
+          "sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "tgl_kunjungan_terakhir",
+          "TEXT"
+        ],
+        [
+          "hari_sejak_kunjungan",
+          "INTEGER"
+        ],
+        [
+          "total_wo_valid",
+          "INTEGER"
+        ],
+        [
+          "total_kunjungan_fisik",
+          "INTEGER"
+        ],
+        [
+          "interval_avg_hari",
+          "REAL"
+        ],
+        [
+          "interval_last_hari",
+          "INTEGER"
+        ],
+        [
+          "predicted_next_visit",
+          "TEXT"
+        ],
+        [
+          "avg_revenue_per_wo",
+          "REAL"
+        ],
+        [
+          "total_revenue_lifetime",
+          "REAL"
+        ],
+        [
+          "total_revenue_cash",
+          "REAL"
+        ],
+        [
+          "avg_revenue_total",
+          "REAL"
+        ],
+        [
+          "avg_tgp_per_wo",
+          "REAL"
+        ],
+        [
+          "avg_adt_per_wo",
+          "REAL"
+        ],
+        [
+          "avg_sublet_per_wo",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_tgp",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_adt",
+          "REAL"
+        ],
+        [
+          "pct_wo_with_sublet",
+          "REAL"
+        ],
+        [
+          "last_pekerjaan",
+          "TEXT"
+        ],
+        [
+          "total_wo_tcare",
+          "INTEGER"
+        ],
+        [
+          "total_wo_upselling",
+          "INTEGER"
+        ],
+        [
+          "segment_rfm",
+          "TEXT"
+        ],
+        [
+          "last_updated",
+          "TEXT"
+        ]
+      ]
+    },
+    "daily_kpi": {
+      "type": "table",
+      "rows": 6511,
+      "columns": [
+        [
+          "tanggal",
+          "TEXT"
+        ],
+        [
+          "sa",
+          "TEXT"
+        ],
+        [
+          "is_counter",
+          "INT"
+        ],
+        [
+          "unit_entry",
+          ""
+        ],
+        [
+          "cpus",
+          ""
+        ],
+        [
+          "revenue",
+          ""
+        ],
+        [
+          "jasa",
+          ""
+        ],
+        [
+          "tgp",
+          ""
+        ],
+        [
+          "adt",
+          ""
+        ],
+        [
+          "sublet",
+          ""
+        ],
+        [
+          "upselling",
+          ""
+        ],
+        [
+          "total_liter",
+          ""
+        ]
+      ]
+    },
+    "extended_warranty": {
+      "type": "table",
+      "rows": 705,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "tgl_penerimaan",
+          "TEXT"
+        ],
+        [
+          "validity",
+          "TEXT"
+        ],
+        [
+          "keterangan",
+          "TEXT"
+        ],
+        [
+          "akhir_extended_warranty",
+          "TEXT"
+        ],
+        [
+          "service_1_tgl",
+          "TEXT"
+        ],
+        [
+          "service_1_dealer",
+          "TEXT"
+        ],
+        [
+          "service_2_tgl",
+          "TEXT"
+        ],
+        [
+          "service_2_dealer",
+          "TEXT"
+        ],
+        [
+          "service_3_tgl",
+          "TEXT"
+        ],
+        [
+          "service_3_dealer",
+          "TEXT"
+        ],
+        [
+          "service_4_tgl",
+          "TEXT"
+        ],
+        [
+          "service_4_dealer",
+          "TEXT"
+        ],
+        [
+          "service_5_tgl",
+          "TEXT"
+        ],
+        [
+          "service_5_dealer",
+          "TEXT"
+        ],
+        [
+          "service_6_tgl",
+          "TEXT"
+        ],
+        [
+          "service_6_dealer",
+          "TEXT"
+        ],
+        [
+          "service_7_tgl",
+          "TEXT"
+        ],
+        [
+          "service_7_dealer",
+          "TEXT"
+        ],
+        [
+          "last_updated",
+          "TEXT"
+        ]
+      ]
+    },
+    "invoice": {
+      "type": "table",
+      "rows": 49528,
+      "columns": [
+        [
+          "no_wo",
+          "INTEGER"
+        ],
+        [
+          "invoice",
+          "REAL"
+        ],
+        [
+          "jasa",
+          "INTEGER"
+        ],
+        [
+          "sublet",
+          "INTEGER"
+        ],
+        [
+          "materai",
+          "INTEGER"
+        ],
+        [
+          "tgl_invoice",
+          "TIMESTAMP"
+        ],
+        [
+          "no_invoice",
+          "TEXT"
+        ]
+      ]
+    },
+    "marketing_program": {
+      "type": "table",
+      "rows": 4,
+      "columns": [
+        [
+          "id",
+          "INTEGER"
+        ],
+        [
+          "nama_program",
+          "TEXT"
+        ],
+        [
+          "deskripsi",
+          "TEXT"
+        ],
+        [
+          "kondisi_sql",
+          "TEXT"
+        ],
+        [
+          "prioritas",
+          "TEXT"
+        ],
+        [
+          "aktif",
+          "INTEGER"
+        ],
+        [
+          "created_at",
+          "TEXT"
+        ]
+      ]
+    },
+    "master_adt": {
+      "type": "table",
+      "rows": 24,
+      "columns": [
+        [
+          "kode_item",
+          "TEXT"
+        ],
+        [
+          "nama_canonical",
+          "TEXT"
+        ],
+        [
+          "aktif",
+          "INTEGER"
+        ]
+      ]
+    },
+    "rekapbulanan": {
+      "type": "table",
+      "rows": 52105,
+      "columns": [
+        [
+          "tanggal",
+          "TEXT"
+        ],
+        [
+          "no_wo",
+          "REAL"
+        ],
+        [
+          "sa",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "no_invoice",
+          "TEXT"
+        ],
+        [
+          "invoice",
+          "REAL"
+        ],
+        [
+          "jasa",
+          "REAL"
+        ],
+        [
+          "sublet",
+          "REAL"
+        ],
+        [
+          "tgp",
+          "REAL"
+        ],
+        [
+          "adt",
+          "REAL"
+        ],
+        [
+          "oth",
+          "REAL"
+        ],
+        [
+          "total_liter",
+          "REAL"
+        ],
+        [
+          "total_revenue",
+          "REAL"
+        ],
+        [
+          "kategori",
+          "TEXT"
+        ],
+        [
+          "is_counter",
+          "INTEGER"
+        ],
+        [
+          "status_hari",
+          "TEXT"
+        ]
+      ]
+    },
+    "rs": {
+      "type": "table",
+      "rows": 47035,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "customer",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "segment",
+          "TEXT"
+        ],
+        [
+          "tgl_do",
+          "TEXT"
+        ],
+        [
+          "no_polisi",
+          "TEXT"
+        ],
+        [
+          "telp_gsm",
+          "TEXT"
+        ],
+        [
+          "nama_sales",
+          "TEXT"
+        ],
+        [
+          "batas_tcare",
+          "TEXT"
+        ],
+        [
+          "in_tcare",
+          "INTEGER"
+        ],
+        [
+          "sisa_bulan_tcare",
+          "REAL"
+        ],
+        [
+          "kecamatan",
+          "TEXT"
+        ],
+        [
+          "kabupaten",
+          "TEXT"
+        ],
+        [
+          "kota",
+          "TEXT"
+        ],
+        [
+          "dealer_penjual",
+          "TEXT"
+        ],
+        [
+          "dealer_kategori",
+          "TEXT"
+        ]
+      ]
+    },
+    "sqlite_sequence": {
+      "type": "table",
+      "rows": 2,
+      "columns": [
+        [
+          "name",
+          ""
+        ],
+        [
+          "seq",
+          ""
+        ]
+      ]
+    },
+    "target_bulanan": {
+      "type": "table",
+      "rows": 108,
+      "columns": [
+        [
+          "tahun",
+          "INTEGER"
+        ],
+        [
+          "bulan",
+          "INTEGER"
+        ],
+        [
+          "bulan_nama",
+          "TEXT"
+        ],
+        [
+          "sa",
+          "TEXT"
+        ],
+        [
+          "target_cpus",
+          "REAL"
+        ],
+        [
+          "target_revenue",
+          "REAL"
+        ],
+        [
+          "target_liter",
+          "REAL"
+        ],
+        [
+          "tipe",
+          "TEXT"
+        ]
+      ]
+    },
+    "tcare_monthly": {
+      "type": "table",
+      "rows": 132,
+      "columns": [
+        [
+          "bulan",
+          "TEXT"
+        ],
+        [
+          "pekerjaan",
+          "TEXT"
+        ],
+        [
+          "potensi",
+          "INTEGER"
+        ],
+        [
+          "realisasi",
+          "INTEGER"
+        ],
+        [
+          "real_own",
+          "INTEGER"
+        ],
+        [
+          "real_berkah",
+          "INTEGER"
+        ],
+        [
+          "punctual",
+          "INTEGER"
+        ],
+        [
+          "early",
+          "INTEGER"
+        ],
+        [
+          "late",
+          "INTEGER"
+        ],
+        [
+          "conversion",
+          "REAL"
+        ]
+      ]
+    },
+    "tcare_schedule": {
+      "type": "table",
+      "rows": 277866,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "dealer_kategori",
+          "TEXT"
+        ],
+        [
+          "tgl_do",
+          "TEXT"
+        ],
+        [
+          "kunjungan",
+          "INTEGER"
+        ],
+        [
+          "pekerjaan",
+          "TEXT"
+        ],
+        [
+          "bulan_jadwal",
+          "TEXT"
+        ],
+        [
+          "bulan_realisasi",
+          "TEXT"
+        ],
+        [
+          "status",
+          "TEXT"
+        ],
+        [
+          "no_wo_real",
+          "REAL"
+        ],
+        [
+          "sa_realisasi",
+          "TEXT"
+        ],
+        [
+          "expired",
+          "INTEGER"
+        ]
+      ]
+    },
+    "tcare_unit": {
+      "type": "table",
+      "rows": 47035,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "dealer_kategori",
+          "TEXT"
+        ],
+        [
+          "tcare_type",
+          "TEXT"
+        ],
+        [
+          "sisa_service",
+          "INTEGER"
+        ],
+        [
+          "sisa_detail",
+          "TEXT"
+        ],
+        [
+          "next_service",
+          "TEXT"
+        ],
+        [
+          "last_sbe_km",
+          "REAL"
+        ],
+        [
+          "last_sbe_date",
+          "TEXT"
+        ],
+        [
+          "last_sbe_dealer",
+          "TEXT"
+        ],
+        [
+          "last_sbe_source",
+          "TEXT"
+        ],
+        [
+          "aktif_kategori",
+          "TEXT"
+        ],
+        [
+          "sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "tgl_sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "flag_pending_sbe",
+          "INTEGER"
+        ],
+        [
+          "flag_sa",
+          "TEXT"
+        ],
+        [
+          "flag_tgl_kunjungan",
+          "TEXT"
+        ],
+        [
+          "flag_wo_type",
+          "TEXT"
+        ],
+        [
+          "flag_next_sbe",
+          "TEXT"
+        ],
+        [
+          "next_sbe_expected",
+          "TEXT"
+        ],
+        [
+          "last_updated",
+          "TEXT"
+        ]
+      ]
+    },
+    "unit_tcare": {
+      "type": "view",
+      "rows": 47035,
+      "columns": [
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "customer",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "segment",
+          "TEXT"
+        ],
+        [
+          "tgl_do",
+          "TEXT"
+        ],
+        [
+          "no_polisi",
+          "TEXT"
+        ],
+        [
+          "telp_gsm",
+          "TEXT"
+        ],
+        [
+          "nama_sales",
+          "TEXT"
+        ],
+        [
+          "batas_tcare",
+          "TEXT"
+        ],
+        [
+          "in_tcare",
+          "INTEGER"
+        ],
+        [
+          "sisa_bulan_tcare",
+          "REAL"
+        ],
+        [
+          "kecamatan",
+          "TEXT"
+        ],
+        [
+          "kabupaten",
+          "TEXT"
+        ],
+        [
+          "kota",
+          "TEXT"
+        ],
+        [
+          "dealer_penjual",
+          "TEXT"
+        ],
+        [
+          "dealer_kategori",
+          "TEXT"
+        ],
+        [
+          "tcare_type",
+          "TEXT"
+        ],
+        [
+          "sisa_service",
+          "INTEGER"
+        ],
+        [
+          "sisa_detail",
+          "TEXT"
+        ],
+        [
+          "next_service",
+          "TEXT"
+        ],
+        [
+          "last_sbe_km",
+          "REAL"
+        ],
+        [
+          "last_sbe_date",
+          "TEXT"
+        ],
+        [
+          "last_sbe_dealer",
+          "TEXT"
+        ],
+        [
+          "last_sbe_source",
+          "TEXT"
+        ],
+        [
+          "aktif_kategori",
+          "TEXT"
+        ],
+        [
+          "sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "tgl_sa_terakhir",
+          "TEXT"
+        ],
+        [
+          "flag_pending_sbe",
+          "INTEGER"
+        ],
+        [
+          "flag_sa",
+          "TEXT"
+        ],
+        [
+          "flag_tgl_kunjungan",
+          "TEXT"
+        ],
+        [
+          "flag_wo_type",
+          "TEXT"
+        ],
+        [
+          "next_sbe_expected",
+          "TEXT"
+        ],
+        [
+          "last_updated",
+          "TEXT"
+        ]
+      ]
+    },
+    "unitmasuk": {
+      "type": "table",
+      "rows": 112457,
+      "columns": [
+        [
+          "no_polisi",
+          "TEXT"
+        ],
+        [
+          "no_wo",
+          "INTEGER"
+        ],
+        [
+          "no_invoice",
+          "TEXT"
+        ],
+        [
+          "customer",
+          "TEXT"
+        ],
+        [
+          "jam",
+          "TEXT"
+        ],
+        [
+          "serah",
+          "TEXT"
+        ],
+        [
+          "no_rangka",
+          "TEXT"
+        ],
+        [
+          "model",
+          "TEXT"
+        ],
+        [
+          "tunggu",
+          "TEXT"
+        ],
+        [
+          "sa",
+          "TEXT"
+        ],
+        [
+          "mech",
+          "TEXT"
+        ],
+        [
+          "klp",
+          "TEXT"
+        ],
+        [
+          "pekerjaan",
+          "TEXT"
+        ],
+        [
+          "rate",
+          "REAL"
+        ],
+        [
+          "arate",
+          "REAL"
+        ],
+        [
+          "stat",
+          "TEXT"
+        ],
+        [
+          "ket",
+          "TEXT"
+        ],
+        [
+          "tanggal",
+          "TEXT"
+        ],
+        [
+          "tgl_invoice",
+          "TEXT"
+        ],
+        [
+          "sublet_type",
+          "TEXT"
+        ],
+        [
+          "kategori",
+          "TEXT"
+        ],
+        [
+          "kelompok",
+          "TEXT"
+        ],
+        [
+          "tcare",
+          "TEXT"
+        ],
+        [
+          "is_own",
+          "INTEGER"
+        ],
+        [
+          "tgl_bpk",
+          "TEXT"
+        ],
+        [
+          "batas_tcare",
+          "TEXT"
+        ],
+        [
+          "in_tcare",
+          "INTEGER"
+        ],
+        [
+          "nama_sales",
+          "TEXT"
+        ]
+      ]
+    }
+  },
+  "potensi": [
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 349
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 304
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 34
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 162
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 11
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 40
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 375
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 270
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 29
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 154
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 18
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 33
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 349
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 283
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 39
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 177
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 14
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 34
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 393
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 350
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 35
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 191
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 19
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 42
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 3
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 324
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 290
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 31
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 168
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 17
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 30
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 376
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 340
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 41
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 172
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 16
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 47
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 305
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 296
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 38
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 162
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 44
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 349
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 287
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 28
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 149
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 17
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 38
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 314
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 296
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 29
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 168
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 11
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 59
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 322
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 280
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 28
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 170
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 19
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 42
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 4
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 317
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 303
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 33
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 159
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 18
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 51
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 4
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 336
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 328
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 35
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 157
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 13
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 52
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 270
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 291
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 30
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 137
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 51
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 286
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 264
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 22
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 128
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 13
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 53
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 5
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 262
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 293
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 23
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 155
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 13
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 72
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 248
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 258
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 28
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 156
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 14
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 58
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 5
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 280
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 277
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 29
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 140
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 59
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 5
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 271
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 278
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 28
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 124
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 64
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 4
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 230
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 279
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 28
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 113
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 11
+    },
+    {
+      "bulan": "2026-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 62
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 264
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 243
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 19
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 98
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2026-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 77
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 8
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 216
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 263
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 21
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 124
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 82
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 3
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 205
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 237
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 24
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 110
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 71
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 3
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 11
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 210
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 258
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 21
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 94
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2026-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 69
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 3
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 5
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 215
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 232
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 21
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 88
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2026-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 62
+    }
+  ],
+  "realisasi": [
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 184
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 233
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 9
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 63
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 21
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 170
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 243
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 8
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 55
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 18
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 170
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 244
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 86
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 25
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 147
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 191
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 16
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 57
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 4
+    },
+    {
+      "bulan": "2025-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 19
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 141
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 232
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 9
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 54
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 5
+    },
+    {
+      "bulan": "2025-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 16
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 162
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 269
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 12
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 42
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 5
+    },
+    {
+      "bulan": "2025-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 21
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 157
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 264
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 10
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 106
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-07",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 37
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 199
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 266
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 13
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 69
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 3
+    },
+    {
+      "bulan": "2025-08",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 36
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 157
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 245
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 122
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 3
+    },
+    {
+      "bulan": "2025-09",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 34
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 163
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 185
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 17
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 86
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 5
+    },
+    {
+      "bulan": "2025-10",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 37
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 155
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 185
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 8
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 69
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2025-11",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 35
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 168
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 241
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 8
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 78
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 9
+    },
+    {
+      "bulan": "2025-12",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 32
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 166
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 261
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 63
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-01",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 34
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 145
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 203
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 12
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 69
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2026-02",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 36
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 108
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 138
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 6
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 38
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 5
+    },
+    {
+      "bulan": "2026-03",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 37
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "RANGGA",
+      "dealer_kategori": "OWN",
+      "cnt": 3
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 170
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 204
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 8
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 35
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 4
+    },
+    {
+      "bulan": "2026-04",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 42
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 127
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 166
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 8
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 37
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 7
+    },
+    {
+      "bulan": "2026-05",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 42
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": null,
+      "dealer_kategori": "OWN",
+      "cnt": 1
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 128
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE",
+      "dealer_kategori": "OWN",
+      "cnt": 163
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "BERKAH",
+      "cnt": 13
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE",
+      "dealer_kategori": "OWN",
+      "cnt": 40
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "BERKAH",
+      "cnt": 2
+    },
+    {
+      "bulan": "2026-06",
+      "tcare_type": "T-CARE LITE+",
+      "dealer_kategori": "OWN",
+      "cnt": 41
+    }
+  ]
+}

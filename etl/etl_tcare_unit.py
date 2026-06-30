@@ -28,7 +28,7 @@ ALL_KM        = sorted(KM_TO_SERVICE.keys())
 # ════════════════════════════════════════
 
 def extract_km_series(series: pd.Series) -> pd.Series:
-    """Vectorized extract km dari kolom pekerjaan SBE."""
+    """Vectorized extract km dari kolom pekerjaan SBE/SBI."""
     cleaned = (series.str.upper()
                      .str.replace('SERVIS BERKALA ', '', regex=False)
                      .str.replace('.', '', regex=False)
@@ -44,13 +44,17 @@ def extract_km_series(series: pd.Series) -> pd.Series:
 # ════════════════════════════════════════
 
 def load_sbe_from_unitmasuk() -> pd.DataFrame:
-    """Ambil SBE tertinggi per no_rangka dari unitmasuk (vectorized)."""
+    """Ambil SBE/SBI tertinggi per no_rangka dari unitmasuk (vectorized).
+    Include SBI (1K) agar last_sbe_km bisa capture servis pertama.
+    Pakai kolom tanggal (WO masuk), bukan tgl_invoice — WO bisa belum
+    ter-invoice tapi unit sudah datang servis.
+    """
     conn = sqlite3.connect(DB_PATH)
     try:
         df = pd.read_sql("""
-            SELECT no_rangka, pekerjaan, tgl_invoice, sa
+            SELECT no_rangka, pekerjaan, tanggal, sa
             FROM unitmasuk
-            WHERE kelompok = 'SBE'
+            WHERE kelompok IN ('SBE', 'SBI')
               AND pekerjaan LIKE 'SERVIS BERKALA%'
               AND no_rangka IS NOT NULL
         """, conn)
@@ -66,17 +70,19 @@ def load_sbe_from_unitmasuk() -> pd.DataFrame:
 
     # Ambil km tertinggi per no_rangka (vectorized)
     idx = df.groupby('no_rangka')['km'].idxmax()
-    result = df.loc[idx, ['no_rangka', 'km', 'tgl_invoice', 'sa']].copy()
+    result = df.loc[idx, ['no_rangka', 'km', 'tanggal', 'sa']].copy()
     return result.rename(columns={
-        'km':          'last_sbe_km_um',
-        'tgl_invoice': 'last_sbe_date_um',
-        'sa':          'last_sbe_dealer_um',
+        'km':      'last_sbe_km_um',
+        'tanggal': 'last_sbe_date_um',
+        'sa':      'last_sbe_dealer_um',
     })
 
 
 def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
     """
-    Ambil last SBE dari Mapping Cust (2 file terbaru, vectorized via melt).
+    Ambil last SBE/SBI dari Mapping Cust (2 file terbaru, vectorized via melt).
+    Include SBI 1K (kolom 'SBI 1K' = tanggal, 'SBI 1K.1' = dealer hasil
+    auto-rename pandas karena nama kolom asli duplikat di source CSV).
     df_map: opsional raw DataFrame Mapping Cust (kolom No. CHASSIS harus ada).
             Jika None, baca dari file.
     """
@@ -107,12 +113,16 @@ def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
         df = df[df['no_rangka'] != 'nan']
         df = df.drop_duplicates(subset=['no_rangka'], keep='first')
 
-    # Kolom SBE yang valid
+    # Kolom SBE 10K-60K yang valid (kelipatan 10K saja, sesuai TCARE)
     valid_km_cols = [(f'SBE {k}K', k * 1000)
                      for k in range(5, 205, 5)
                      if f'SBE {k}K' in df.columns and k * 1000 in KM_TO_SERVICE]
 
-    if not valid_km_cols:
+    # Tambah SBI 1K — kolom dealer-nya adalah 'SBI 1K.1' (auto-rename pandas
+    # karena CSV sumber punya 2 kolom dengan nama sama persis "SBI 1K")
+    has_sbi = 'SBI 1K' in df.columns
+
+    if not valid_km_cols and not has_sbi:
         return pd.DataFrame({'no_rangka': df['no_rangka'],
                              'last_sbe_km_map': None,
                              'last_sbe_date_map': None,
@@ -128,12 +138,24 @@ def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
         if len(sub) == 0:
             continue
         sub['km'] = km
-        # Vectorized date parse — jauh lebih cepat dari apply(parse_date_flexible)
         sub['date'] = pd.to_datetime(
             sub[col], dayfirst=True, errors='coerce'
         ).dt.strftime('%Y-%m-%d')
         sub['dealer'] = df.loc[sub.index, dealer_col] if dealer_col in df.columns else None
         sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
+
+    # SBI 1K — pakai kolom 'SBI 1K' (tanggal) + 'SBI 1K.1' (dealer)
+    if has_sbi:
+        mask = df['SBI 1K'].notna() & (df['SBI 1K'].astype(str).str.strip() != '')
+        sub = df.loc[mask, ['no_rangka', 'SBI 1K']].copy()
+        if len(sub) > 0:
+            sub['km'] = 1000
+            sub['date'] = pd.to_datetime(
+                sub['SBI 1K'], dayfirst=True, errors='coerce'
+            ).dt.strftime('%Y-%m-%d')
+            sub['dealer'] = (df.loc[sub.index, 'SBI 1K.1']
+                             if 'SBI 1K.1' in df.columns else None)
+            sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
 
     aktif = df[['no_rangka']].copy()
     if 'Kategori' in df.columns:
@@ -159,6 +181,67 @@ def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
     result = aktif.merge(last_sbe, on='no_rangka', how='left')
     print(f"  → Mapping Cust SBE: {len(result):,} unit")
     return result
+
+
+def load_sbe_from_tcare_nasional() -> pd.DataFrame:
+    """
+    Ambil last SBE/SBI dari T-CARE Nasional (2 file terbaru).
+    Kolom: 'Bulan 1st Service' s.d. 'Bulan 7th Service' (tanggal lengkap,
+    nama kolom menyesatkan tapi isinya YYYY-MM-DD), beserta
+    'Dealer Nth Service' untuk dealer.
+    1st Service = SBI (1K), 2nd-7th = SBE 10K-60K.
+    """
+    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
+    dfs = []
+    for f in files:
+        try:
+            df = pd.read_excel(f, header=0, engine='openpyxl')
+            dfs.append(df)
+        except Exception:
+            pass
+    if not dfs:
+        return pd.DataFrame()
+
+    df = pd.concat(dfs, ignore_index=True)
+    df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
+    df = df.dropna(subset=['no_rangka'])
+    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+
+    # Mapping ordinal service → km
+    ORDINAL_TO_KM = {
+        '1st': 1000, '2nd': 10000, '3rd': 20000, '4th': 30000,
+        '5th': 40000, '6th': 50000, '7th': 60000,
+    }
+
+    sbe_parts = []
+    for ordinal, km in ORDINAL_TO_KM.items():
+        col_bulan  = f'Bulan {ordinal} Service'
+        col_dealer = f'Dealer {ordinal} Service'
+        if col_bulan not in df.columns:
+            continue
+        mask = df[col_bulan].notna()
+        sub = df.loc[mask, ['no_rangka', col_bulan]].copy()
+        if len(sub) == 0:
+            continue
+        sub['km'] = km
+        sub['date'] = pd.to_datetime(
+            sub[col_bulan], dayfirst=True, errors='coerce'
+        ).dt.strftime('%Y-%m-%d')
+        sub['dealer'] = df.loc[sub.index, col_dealer] if col_dealer in df.columns else None
+        sbe_parts.append(sub[['no_rangka', 'km', 'date', 'dealer']])
+
+    if not sbe_parts:
+        return pd.DataFrame()
+
+    sbe_all = pd.concat(sbe_parts, ignore_index=True)
+    idx_max = sbe_all.groupby('no_rangka')['km'].idxmax()
+    result = sbe_all.loc[idx_max].rename(columns={
+        'km':     'last_sbe_km_tc',
+        'date':   'last_sbe_date_tc',
+        'dealer': 'last_sbe_dealer_tc',
+    })
+    print(f"  → TCARE Nasional SBE: {len(result):,} unit")
+    return result[['no_rangka', 'last_sbe_km_tc', 'last_sbe_date_tc', 'last_sbe_dealer_tc']]
 
 
 def load_tcare_type_from_nasional() -> pd.DataFrame:
@@ -317,6 +400,8 @@ def detect_pending_sbe_vectorized(master: pd.DataFrame,
     )
 
     # Filter WO setelah last SBE
+    merged['tgl_invoice']   = pd.to_datetime(merged['tgl_invoice'],  errors='coerce')
+    merged['last_sbe_date'] = pd.to_datetime(merged['last_sbe_date'], errors='coerce')
     merged = merged[merged['tgl_invoice'] > merged['last_sbe_date']]
     if len(merged) == 0:
         return master
@@ -367,6 +452,9 @@ def run(paths: dict = None, map_cache=None):
     df_sbe_map = load_sbe_from_mapping_cust(df_map=map_cache)
     print(f"    sbe_map       : {time.time()-t:.1f}s"); t = time.time()
 
+    df_sbe_tc  = load_sbe_from_tcare_nasional()
+    print(f"    sbe_tc        : {time.time()-t:.1f}s"); t = time.time()
+
     df_tc_type = load_tcare_type_from_nasional()
     print(f"    tc_type       : {time.time()-t:.1f}s"); t = time.time()
 
@@ -398,31 +486,56 @@ def run(paths: dict = None, map_cache=None):
         master = master.merge(df_sbe_um, on='no_rangka', how='left')
     if len(df_sbe_map) > 0:
         master = master.merge(df_sbe_map, on='no_rangka', how='left')
+    if len(df_sbe_tc) > 0:
+        master = master.merge(df_sbe_tc, on='no_rangka', how='left')
 
-    # Pilih km tertinggi (vectorized)
+    # Pilih km tertinggi dari 3 sumber (vectorized, ignore NaN)
     km_um  = pd.to_numeric(master.get('last_sbe_km_um',  pd.Series(dtype=float)), errors='coerce')
     km_map = pd.to_numeric(master.get('last_sbe_km_map', pd.Series(dtype=float)), errors='coerce')
-    master['last_sbe_km'] = np.fmax(km_um.values, km_map.values)  # fmax = max ignoring NaN
+    km_tc  = pd.to_numeric(master.get('last_sbe_km_tc',  pd.Series(dtype=float)), errors='coerce')
 
-    # Source
-    master['last_sbe_source'] = np.select(
-        [km_um.isna() & km_map.notna(),
-         km_um.notna() & km_map.isna(),
-         km_um.notna() & km_map.notna() & (km_um >= km_map),
-         km_um.notna() & km_map.notna() & (km_um < km_map)],
-        ['mapping_cust', 'unitmasuk', 'unitmasuk', 'mapping_cust'],
-        default=None
+    km_stack = pd.concat([km_um.rename('unitmasuk'),
+                          km_map.rename('mapping_cust'),
+                          km_tc.rename('tcare_nasional')], axis=1)
+    master['last_sbe_km'] = km_stack.max(axis=1, skipna=True)
+
+    # idxmax gagal kalau ada baris all-NaN, jadi isi NaN dengan -1 dulu
+    # (tidak akan terpilih sebagai max kecuali semua kolom NaN)
+    km_stack_filled = km_stack.fillna(-1)
+    has_any = km_stack.notna().any(axis=1)
+    master['last_sbe_source'] = None
+    master.loc[has_any, 'last_sbe_source'] = (
+        km_stack_filled.loc[has_any].idxmax(axis=1)
     )
-    master['last_sbe_date'] = np.where(
-        master['last_sbe_source'] == 'unitmasuk',
-        master.get('last_sbe_date_um'),
-        master.get('last_sbe_date_map')
-    )
-    master['last_sbe_dealer'] = np.where(
-        master['last_sbe_source'] == 'unitmasuk',
-        master.get('last_sbe_dealer_um'),
-        master.get('last_sbe_dealer_map')
-    )
+
+    # Ambil date & dealer sesuai source terpilih
+    # Normalisasi tanggal ke string YYYY-MM-DD dulu (unitmasuk balik dari SQL
+    # sebagai Timestamp, mapping_cust/tcare_nasional sudah string) agar tidak
+    # ada konflik tipe saat di-assign campuran ke kolom yang sama.
+    date_um  = pd.to_datetime(master.get('last_sbe_date_um'),  errors='coerce').dt.strftime('%Y-%m-%d') \
+               if 'last_sbe_date_um' in master.columns else pd.Series(index=master.index, dtype=object)
+    date_map_col = master.get('last_sbe_date_map', pd.Series(index=master.index, dtype=object))
+    date_tc  = master.get('last_sbe_date_tc',  pd.Series(index=master.index, dtype=object))
+
+    date_map = {
+        'unitmasuk':      date_um,
+        'mapping_cust':   date_map_col,
+        'tcare_nasional': date_tc,
+    }
+    dealer_map = {
+        'unitmasuk':      master.get('last_sbe_dealer_um'),
+        'mapping_cust':   master.get('last_sbe_dealer_map'),
+        'tcare_nasional': master.get('last_sbe_dealer_tc'),
+    }
+    master['last_sbe_date']   = None
+    master['last_sbe_dealer'] = None
+
+    for src in ['unitmasuk', 'mapping_cust', 'tcare_nasional']:
+        mask = (master['last_sbe_source'] == src).values
+        if date_map[src] is not None:
+            master.loc[mask, 'last_sbe_date'] = date_map[src].values[mask]
+        if dealer_map[src] is not None:
+            master.loc[mask, 'last_sbe_dealer'] = dealer_map[src].values[mask]
 
     # Hitung sisa vectorized
     sisa_df = calc_sisa_vectorized(master['last_sbe_km'])
@@ -430,9 +543,9 @@ def run(paths: dict = None, map_cache=None):
     master['sisa_detail']       = sisa_df['sisa_detail']
     master['next_sbe_expected'] = sisa_df['next_sbe_expected']
 
-    # Override dari T-CARE Nasional kalau mapping_cust source
+    # Override dari T-CARE Nasional kalau source tcare_nasional & sisa_tc ada
     if 'sisa_tc' in master.columns:
-        mask = (master['last_sbe_source'] == 'mapping_cust') & master['sisa_tc'].notna()
+        mask = (master['last_sbe_source'] == 'tcare_nasional') & master['sisa_tc'].notna()
         master.loc[mask, 'sisa_service'] = master.loc[mask, 'sisa_tc']
     master['next_service'] = master.get('next_sbe_expected')
 
@@ -472,7 +585,6 @@ def run(paths: dict = None, map_cache=None):
     rebuild_tcare_monthly()
 
 
-
 # ════════════════════════════════════════
 # REBUILD TCARE SCHEDULE + MONTHLY
 # ════════════════════════════════════════
@@ -502,6 +614,7 @@ def rebuild_tcare_monthly():
                 conn.commit()
     finally:
         conn.close()
+
 
 # ════════════════════════════════════════
 # TCARE SCHEDULE — detail per unit per kunjungan
@@ -560,14 +673,6 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     schedule = pd.concat(rows, ignore_index=True)
 
-    # Hitung bulan_jadwal sebagai periode (untuk join realisasi)
-    # Match realisasi: no_rangka + bulan kunjungan aktual
-    # Kunjungan ke-N = bulan DO + N*6 ± 0 bulan (exact month match)
-    # Cari realisasi per no_rangka yang bulan_real paling dekat bulan_jadwal per kunjungan
-
-    # Join realisasi ke schedule berdasarkan no_rangka + bulan_real = bulan_jadwal
-    # Satu unit bisa datang early/late → cari kunjungan yang paling cocok per WO
-
     # Step 1: Hitung bulan offset aktual dari tgl_do untuk setiap realisasi
     df_rs_do = df_rs[['no_rangka', 'tgl_do']].copy()
     df_real2 = df_real.merge(df_rs_do, on='no_rangka', how='left')
@@ -579,11 +684,7 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     # Tentukan kunjungan ke berapa berdasarkan KM AKTUAL (dari pekerjaan)
     # Prioritas km aktual > bulan_offset untuk menghindari salah mapping
-    # KM_TO_SERVICE: {1000:1, 10000:2, 20000:3, 30000:4, 40000:5, 50000:6, 60000:7}
-    # Tapi TCARE hanya 6 kunjungan (10K-60K), jadi:
-    # kunjungan 1=10K, 2=20K, 3=30K, 4=40K, 5=50K, 6=60K
     KM_TO_KUNJUNGAN = {10000:1, 20000:2, 30000:3, 40000:4, 50000:5, 60000:6}
-    KUNJUNGAN_TO_KM = {v:k for k,v in KM_TO_KUNJUNGAN.items()}
 
     df_real2['km_actual'] = extract_km_series(df_real2['pekerjaan'])
 
@@ -592,7 +693,6 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
         km = row.get('km_actual')
         if pd.notna(km) and int(km) in KM_TO_KUNJUNGAN:
             return KM_TO_KUNJUNGAN[int(km)]
-        # Fallback: bulan_offset
         offset = row.get('bulan_offset')
         if pd.isna(offset):
             return None
@@ -603,7 +703,6 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     df_real2['kunjungan_real'] = df_real2.apply(map_kunjungan_km, axis=1)
 
-    # Tentukan status punctual/early/late berdasarkan bulan_offset vs jadwal kunjungan
     def get_status(row):
         kunjungan = row.get('kunjungan_real')
         if kunjungan is None or pd.isna(row.get('bulan_offset')):
@@ -618,7 +717,6 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
 
     df_real2['status_real'] = df_real2.apply(get_status, axis=1)
 
-    # Merge realisasi ke schedule berdasarkan no_rangka + kunjungan
     df_real3 = df_real2[['no_rangka', 'kunjungan_real', 'no_wo', 'sa',
                           'bulan_real', 'status_real']].rename(columns={
         'kunjungan_real': 'kunjungan',
@@ -628,16 +726,13 @@ def build_tcare_schedule(conn: sqlite3.Connection) -> pd.DataFrame:
         'status_real':    'status',
     })
 
-    # Ambil 1 realisasi per no_rangka per kunjungan (jika ada duplikat, ambil terbaru)
     df_real3 = df_real3.sort_values('bulan_realisasi', ascending=False)
     df_real3 = df_real3.drop_duplicates(subset=['no_rangka', 'kunjungan'])
 
     schedule = schedule.merge(df_real3, on=['no_rangka', 'kunjungan'], how='left')
 
-    # Status pending untuk yang belum ada realisasi
     schedule['status'] = schedule['status'].fillna('pending')
 
-    # Kolom final
     final_cols = [
         'no_rangka', 'dealer_kategori', 'tgl_do', 'kunjungan', 'pekerjaan',
         'bulan_jadwal', 'bulan_realisasi', 'status',
@@ -665,7 +760,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
     if len(df_schedule) == 0:
         return pd.DataFrame()
 
-    # Potensi: OWN non-expired → group by bulan_jadwal + pekerjaan
     pot = (df_schedule[
                 (df_schedule['dealer_kategori'] == 'OWN') &
                 (df_schedule['expired'] == 0)
@@ -674,7 +768,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
            .size()
            .reset_index(name='potensi'))
 
-    # Realisasi total (OWN + BERKAH) → group by bulan_realisasi + pekerjaan
     real_all = df_schedule[df_schedule['bulan_realisasi'].notna()]
 
     real_total = (real_all
@@ -695,7 +788,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
                    .reset_index(name='real_berkah')
                    .rename(columns={'bulan_realisasi': 'bulan'}))
 
-    # Punctual/early/late — OWN only
     own_real = real_all[real_all['dealer_kategori'] == 'OWN']
 
     punctual = (own_real[own_real['status'] == 'punctual']
@@ -713,7 +805,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
             .size().reset_index(name='late')
             .rename(columns={'bulan_realisasi': 'bulan'}))
 
-    # Merge semua → base dari potensi (bulan_jadwal)
     monthly = pot.rename(columns={'bulan_jadwal': 'bulan'})
     monthly = monthly.merge(real_total,  on=['bulan', 'pekerjaan'], how='left')
     monthly = monthly.merge(real_own,    on=['bulan', 'pekerjaan'], how='left')
@@ -722,7 +813,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
     monthly = monthly.merge(early,       on=['bulan', 'pekerjaan'], how='left')
     monthly = monthly.merge(late,        on=['bulan', 'pekerjaan'], how='left')
 
-    # Fill NaN → 0
     for col in ['realisasi', 'real_own', 'real_berkah', 'punctual', 'early', 'late']:
         monthly[col] = monthly[col].fillna(0).astype(int)
 
@@ -731,7 +821,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
         monthly['potensi'].replace(0, pd.NA)
     ).round(1)
 
-    # Urutkan bulan + pekerjaan
     pekerjaan_order = ['10K', '20K', '30K', '40K', '50K', '60K']
     monthly['pekerjaan'] = pd.Categorical(
         monthly['pekerjaan'], categories=pekerjaan_order, ordered=True
@@ -740,7 +829,6 @@ def build_tcare_monthly(df_schedule: pd.DataFrame) -> pd.DataFrame:
 
     print(f"  → tcare_monthly: {len(monthly):,} baris")
     return monthly
-
 
 
 # ════════════════════════════════════════
@@ -761,10 +849,10 @@ def _get_tcare_type_from_model(model: str) -> str:
 def run_tcare_unit_daily():
     """
     Update ringan tcare_unit berdasarkan WO baru sejak last_updated.
-    - Update SBE: last_sbe_km, last_sbe_date, sisa_service, dll
+    - Update SBE/SBI: last_sbe_km, last_sbe_date, sisa_service, dll
     - Update SA terakhir dari WO terbaru
     - Insert unit baru (belum ada di tcare_unit) dengan data parsial dari rs
-    - TIDAK rebuild tcare_schedule dan tcare_monthly
+    - TIDAK rebuild tcare_schedule dan tcare_monthly (dipanggil terpisah)
     """
     t0 = datetime.now()
     print("\n  Daily update TCARE Unit...")
@@ -782,13 +870,13 @@ def run_tcare_unit_daily():
         last_upd = '2020-01-01'
     print(f"    last_updated  : {last_upd}")
 
-    # 2. Ambil WO baru sejak last_updated
+    # 2. Ambil WO baru sejak last_updated (termasuk SBI)
     try:
         df_new = pd.read_sql(f"""
             SELECT no_rangka, tanggal, tgl_invoice, sa,
                    kelompok, pekerjaan
             FROM unitmasuk
-            WHERE kelompok IN ('SBE', 'GRP', 'LUB')
+            WHERE kelompok IN ('SBE', 'SBI', 'GRP', 'LUB')
               AND no_rangka IS NOT NULL
               AND tanggal >= '{last_upd}'
         """, conn)
@@ -817,18 +905,16 @@ def run_tcare_unit_daily():
 
     conn.close()
 
-    # ── A. Update SBE ──
-    df_sbe = df_new[df_new['kelompok'] == 'SBE'].copy()
+    # ── A. Update SBE (termasuk SBI/1K) ──
+    df_sbe = df_new[df_new['kelompok'].isin(['SBE', 'SBI'])].copy()
     if len(df_sbe) > 0:
         df_sbe['km'] = extract_km_series(df_sbe['pekerjaan'])
         df_sbe = df_sbe.dropna(subset=['km'])
         df_sbe['km'] = df_sbe['km'].astype(int)
 
-        # Ambil km tertinggi per no_rangka dari WO baru
         idx = df_sbe.groupby('no_rangka')['km'].idxmax()
         sbe_best = df_sbe.loc[idx].set_index('no_rangka')
 
-        # Bandingkan dengan last_sbe_km yang sudah ada
         df_tcu = df_tcu.set_index('no_rangka')
         for nr, row in sbe_best.iterrows():
             new_km = int(row['km'])
@@ -842,7 +928,6 @@ def run_tcare_unit_daily():
                     df_tcu.at[nr, 'last_sbe_source']  = 'unitmasuk'
         df_tcu = df_tcu.reset_index()
 
-        # Recalc sisa_service untuk yang berubah
         sisa_df = calc_sisa_vectorized(df_tcu['last_sbe_km'])
         df_tcu['sisa_service']      = sisa_df['sisa_service']
         df_tcu['sisa_detail']       = sisa_df['sisa_detail']
@@ -850,7 +935,6 @@ def run_tcare_unit_daily():
         df_tcu['next_service']      = df_tcu['next_sbe_expected']
 
     # ── B. Update SA terakhir ──
-    # Ambil WO terbaru per no_rangka dari df_new
     idx_sa = df_new.groupby('no_rangka')['tanggal'].idxmax()
     sa_latest = df_new.loc[idx_sa, ['no_rangka', 'sa', 'tanggal']].set_index('no_rangka')
 
@@ -870,13 +954,11 @@ def run_tcare_unit_daily():
         df_rs_idx = df_rs.set_index('no_rangka')
         new_rows = []
         for nr in new_units:
-            # Data dari rs
             rs_row = df_rs_idx.loc[nr] if nr in df_rs_idx.index else None
             dealer_kat = rs_row['dealer_kategori'] if rs_row is not None else 'BERKAH'
             batas      = rs_row['batas_tcare']     if rs_row is not None else None
             model      = rs_row['model']            if rs_row is not None else None
 
-            # tcare_type sementara dari model
             tcare_type = None
             if batas and pd.notna(batas):
                 try:
@@ -885,9 +967,8 @@ def run_tcare_unit_daily():
                 except Exception:
                     pass
 
-            # SBE dari WO baru unit ini
             unit_sbe = df_new[
-                (df_new['no_rangka'] == nr) & (df_new['kelompok'] == 'SBE')
+                (df_new['no_rangka'] == nr) & (df_new['kelompok'].isin(['SBE', 'SBI']))
             ].copy()
             last_sbe_km = last_sbe_date = last_sbe_dealer = None
             if len(unit_sbe) > 0:
@@ -901,7 +982,6 @@ def run_tcare_unit_daily():
 
             sisa_df = calc_sisa_vectorized(pd.Series([last_sbe_km]))
 
-            # SA terakhir
             unit_all = df_new[df_new['no_rangka'] == nr]
             idx_sa_new = unit_all['tanggal'].idxmax()
             sa_t   = unit_all.at[idx_sa_new, 'sa']
@@ -939,8 +1019,8 @@ def run_tcare_unit_daily():
     # ── D. Update flag pending SBE ──
     df_wo = df_new[df_new['kelompok'].isin(['GRP', 'LUB'])].copy()
     if len(df_wo) > 0:
+        df_wo = df_wo.drop(columns=['tgl_invoice'], errors='ignore')
         df_wo = df_wo.rename(columns={'tanggal': 'tgl_invoice'})
-        # Merge batas_tcare dari rs
         df_tcu = df_tcu.merge(
             df_rs[['no_rangka', 'batas_tcare']].rename(
                 columns={'batas_tcare': '_batas'}),
@@ -970,6 +1050,7 @@ def run_tcare_unit_daily():
     flag_n  = df_tcu['flag_pending_sbe'].sum()
     print(f"  ✅ tcare_unit daily: {len(df_tcu):,} unit "
           f"({int(flag_n)} pending SBE) — {elapsed:.1f} detik")
+
 
 if __name__ == '__main__':
     run()
