@@ -5,8 +5,8 @@ Router tipis — deteksi mode lalu delegasikan ke modul yang tepat.
 
 Mode:
   normal    → sql_agent.run()       Qwen generate SQL (data, ranking, dll)
-  analisa   → investigator.run()    Claude investigasi langsung
-  claude    → investigator.run()    Claude agentic loop (manual trigger)
+  analisa   → investigator.run()    Claude investigasi/analisa mendalam
+  claude    → sql_agent.run()       Claude generate SQL (fast, sama seperti Qwen)
   laporan   → tools/report_generator
 """
 
@@ -94,14 +94,15 @@ def main():
     print("\n" + "═" * 42)
     print("  AI Nasmoco Analyst" + (" [DEBUG]" if DEBUG else ""))
     print("═" * 42)
-    print("  normal  : tanya langsung")
-    print("  analisa : otomatis → Claude")
-    print("  claude  : ketik 'claude [pertanyaan]'")
+    print("  normal  : tanya langsung (Qwen)")
+    print("  claude  : ketik 'claude, [pertanyaan]' (Claude fast)")
+    print("  analisa : ketik 'analisa ...' → Claude investigator")
     print("  keluar  : ketik 'exit'")
     print("═" * 42 + "\n")
 
     from ai.sql_agent    import run as sql_run
     from ai.investigator import run as investigator_run
+    from tools.attack_list_tcare import is_attack_list_query, handle_attack_list
 
     while True:
         pertanyaan = input("Anda: ").strip()
@@ -114,14 +115,17 @@ def main():
             break
 
         try:
+            # ── Attack list TCARE (query baku, tidak pakai LLM) ──
+            if is_attack_list_query(pertanyaan):
+                handle_attack_list(pertanyaan)
+
             # ── Mode laporan ──
-            if need_report(pertanyaan):
+            elif need_report(pertanyaan):
                 handle_laporan(pertanyaan)
 
-            # ── Mode investigasi Claude (manual trigger) ──
+            # ── Mode Claude fast (SQL via Claude, bukan Qwen) ──
             elif need_claude(pertanyaan):
-                q = re.sub(r'^claude[,\s]+', '', pertanyaan, flags=re.IGNORECASE).strip()
-                investigator_run(q, debug=DEBUG)
+                sql_run(pertanyaan, debug=DEBUG)  # sql_agent deteksi prefix 'claude,' sendiri
 
             # ── Mode analisa → investigator Claude otomatis ──
             elif need_analysis(pertanyaan):

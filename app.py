@@ -27,20 +27,32 @@ import uvicorn
 
 
 # ════════════════════════════════════════
-# ROUTING KEYWORDS (sama persis dengan main.py)
+# LOGGING — tambah timestamp di setiap print() server
+# ════════════════════════════════════════
+
+import builtins
+_original_print = builtins.print
+
+def _print_with_timestamp(*args, **kwargs):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if args:
+        _original_print(f"[{ts}]", *args, **kwargs)
+    else:
+        _original_print(*args, **kwargs)
+
+builtins.print = _print_with_timestamp
+
+
+# ════════════════════════════════════════
+# ROUTING KEYWORDS
+# Analisa/investigasi TIDAK ditangani app.py — hanya via main.py (terminal)
+# Claude fast ('claude, ...') tetap jalan, dideteksi sql_agent.run() sendiri
 # ════════════════════════════════════════
 
 LAPORAN_KEYWORDS = [
     "buat laporan", "generate laporan",
     "laporan bulan", "buat report",
     "generate report", "cetak laporan"
-]
-
-ANALYSIS_KEYWORDS = [
-    "analisa", "analisis", "investigasi",
-    "kenapa", "mengapa", "penyebab",
-    "bandingkan", "compare", "trend",
-    "growth", "evaluasi", "root cause",
 ]
 
 EXCEL_KEYWORDS = [
@@ -69,13 +81,6 @@ def need_sawa(text: str) -> bool:
 def need_export(text: str) -> bool:
     return any(w in text.lower() for w in EXCEL_KEYWORDS)
 
-def need_claude(text: str) -> bool:
-    t = text.lower().strip()
-    return t.startswith("claude ") or t.startswith("claude,")
-
-def need_analysis(text: str) -> bool:
-    return any(w in text.lower() for w in ANALYSIS_KEYWORDS)
-
 def extract_vin_from_text(text: str) -> list:
     """Ekstrak nomor rangka (17 digit VIN) langsung dari teks pertanyaan."""
     return re.findall(VIN_REGEX, text.upper())
@@ -87,13 +92,41 @@ def extract_vin_from_text(text: str) -> list:
 
 import pandas as pd
 
-_sessions: dict[str, pd.DataFrame] = {}  # session_id → last DataFrame
+_sessions: dict[str, pd.DataFrame] = {}        # session_id -> last DataFrame
+_sessions_source: dict[str, str] = {}          # session_id -> 'sql_agent' | 'attack_list_pending' | 'attack_list_expired'
 
 def get_last_result(session_id: str) -> pd.DataFrame:
     return _sessions.get(session_id, pd.DataFrame())
 
-def set_last_result(session_id: str, df: pd.DataFrame):
+def set_last_result(session_id: str, df: pd.DataFrame, source: str = "sql_agent"):
     _sessions[session_id] = df.copy()
+    _sessions_source[session_id] = source
+
+def get_last_result_source(session_id: str) -> str:
+    return _sessions_source.get(session_id, "sql_agent")
+
+
+# ════════════════════════════════════════
+# SAWA PROGRESS STORE — untuk polling dari browser
+# ════════════════════════════════════════
+
+_sawa_progress: dict = {}  # session_id -> {"current", "total", "vin", "status", "done"}
+
+def update_sawa_progress(session_id: str, current: int, total: int, vin: str, status: str):
+    _sawa_progress[session_id] = {
+        "current": current, "total": total, "vin": vin,
+        "status": status, "done": current >= total and status != "processing",
+    }
+
+def get_sawa_progress(session_id: str) -> dict:
+    return _sawa_progress.get(session_id, {"current": 0, "total": 0, "vin": "", "status": "", "done": True})
+
+def reset_sawa_progress(session_id: str, total: int):
+    _sawa_progress[session_id] = {"current": 0, "total": total, "vin": "", "status": "starting", "done": False}
+
+def finish_sawa_progress(session_id: str):
+    if session_id in _sawa_progress:
+        _sawa_progress[session_id]["done"] = True
 
 
 # ════════════════════════════════════════
@@ -121,10 +154,19 @@ def build_excel_bytes(df: pd.DataFrame) -> bytes:
 # ════════════════════════════════════════
 
 def capture_run(fn, *args, **kwargs) -> str:
-    """Jalankan fn dan kembalikan semua output print() sebagai string."""
+    """
+    Jalankan fn dan kembalikan semua output print() sebagai string.
+    Gunakan print asli (tanpa timestamp) supaya output ke browser tetap bersih;
+    timestamp hanya untuk log yang tampil di terminal server.
+    """
     buf = io.StringIO()
-    with redirect_stdout(buf):
-        fn(*args, **kwargs)
+    builtins.print = _original_print  # nonaktifkan timestamp sementara
+    try:
+        with redirect_stdout(buf):
+            fn(*args, **kwargs)
+    finally:
+        builtins.print = _print_with_timestamp  # aktifkan lagi untuk log server
+
     output = buf.getvalue().strip()
 
     # Sembunyikan baris MODEL= kalau bukan debug mode
@@ -175,7 +217,10 @@ def run_sql_agent(pertanyaan: str, session_id: str, debug: bool = False) -> str:
 # HANDLER LAPORAN
 # ════════════════════════════════════════
 
-def handle_laporan(pertanyaan: str) -> str:
+def handle_laporan(pertanyaan: str) -> dict:
+    """
+    Generate laporan HTML, return dict berisi filepath untuk di-stream ke browser.
+    """
     try:
         from tools.report_generator import buat_laporan
 
@@ -195,12 +240,12 @@ def handle_laporan(pertanyaan: str) -> str:
             tahun = int(yr.group(1))
 
         filepath = buat_laporan(tahun, bulan)
-        return f"✅ Laporan selesai:\n{filepath}\n\nBuka di browser atau kirim ke grup WA."
+        return {"laporan": True, "filepath": str(filepath)}
 
     except ImportError:
-        return "⚠ report_generator.py tidak ditemukan di tools/"
+        return {"error": "⚠ report_generator.py tidak ditemukan di tools/"}
     except Exception as e:
-        return f"ERROR generate laporan: {e}"
+        return {"error": f"ERROR generate laporan: {e}"}
 
 
 # ════════════════════════════════════════
@@ -231,6 +276,7 @@ async def process_message(pertanyaan: str, session_id: str, debug: bool = False)
         if need_sawa(pertanyaan):
             # Coba ambil VIN dari teks pertanyaan langsung
             vin_list = extract_vin_from_text(pertanyaan)
+            from_text = bool(vin_list)
 
             # Kalau tidak ada VIN di teks, ambil dari _last_result session
             if not vin_list:
@@ -238,15 +284,34 @@ async def process_message(pertanyaan: str, session_id: str, debug: bool = False)
                 if 'no_rangka' in df.columns and not df.empty:
                     vin_list = df['no_rangka'].dropna().tolist()
 
+                    # Unit attack list (pending/expired) belum pernah servis SBE 60K,
+                    # jadi belum mungkin punya sertifikat SAWA — beri penjelasan, jangan proses
+                    source = get_last_result_source(session_id)
+                    if source.startswith("attack_list"):
+                        return ("⚠ SAWA tidak bisa diambil dari hasil attack list.\n\n"
+                                "Sertifikat SAWA baru terbit setelah unit menyelesaikan "
+                                "servis SBE 60K. Unit di attack list belum pernah datang "
+                                "servis, jadi belum mungkin punya SAWA.\n\n"
+                                "Jalankan query unit yang sudah selesai SBE 60K dulu, "
+                                "baru ketik 'ambil sawa nya'.")
+
             if not vin_list:
                 return ("⚠ Tidak ada nomor rangka ditemukan.\n"
                         "Ketik nomor rangka langsung atau jalankan query dulu.")
 
+            reset_sawa_progress(session_id, len(vin_list))
+
+            def _on_progress(current, total, vin, status):
+                update_sawa_progress(session_id, current, total, vin, status)
+
             def _run_sawa():
                 from tools.extended_warranty import run as run_sawa
-                run_sawa(vin_list, auto_confirm=True)
+                run_sawa(vin_list, auto_confirm=True, on_progress=_on_progress)
 
-            await loop.run_in_executor(None, lambda: capture_run(_run_sawa))
+            try:
+                await loop.run_in_executor(None, lambda: capture_run(_run_sawa))
+            finally:
+                finish_sawa_progress(session_id)
 
             # Kirim sinyal download ZIP ke browser
             vins_param = ",".join(vin_list)
@@ -256,23 +321,56 @@ async def process_message(pertanyaan: str, session_id: str, debug: bool = False)
                 "count": len(vin_list),
             }
 
+        # ── Attack list TCARE (query baku, tidak pakai LLM) ──
+        try:
+            from tools.attack_list_tcare import (
+                is_attack_list_query, is_expired_query,
+                get_attack_list, get_attack_list_expired,
+                parse_bulan_dari_teks, parse_sa_dari_teks,
+            )
+            if is_attack_list_query(pertanyaan):
+                bulan = parse_bulan_dari_teks(pertanyaan)
+                sa    = parse_sa_dari_teks(pertanyaan)
+                expired_mode = is_expired_query(pertanyaan)
+                fn          = get_attack_list_expired if expired_mode else get_attack_list
+                label_mode  = "EXPIRED" if expired_mode else "PENDING"
+                source_tag  = "attack_list_expired" if expired_mode else "attack_list_pending"
+                count_only  = any(k in pertanyaan.lower()
+                                   for k in ['berapa', 'jumlah', 'total', 'ada berapa'])
+                bulan_label = bulan or datetime.now().strftime('%Y-%m')
+
+                if count_only:
+                    total = await loop.run_in_executor(
+                        None, lambda: fn(bulan=bulan, sa=sa, count_only=True)
+                    )
+                    label = f" SA {sa}" if sa else ""
+                    return f"Attack list TCARE {label_mode} {bulan_label}{label}: {total} unit"
+
+                df = await loop.run_in_executor(
+                    None, lambda: fn(bulan=bulan, sa=sa)
+                )
+                # Tag source: unit attack list belum pernah datang servis,
+                # jadi belum mungkin punya SAWA — dicek di SAWA handler nanti
+                set_last_result(session_id, df, source=source_tag)
+
+                if df.empty:
+                    return (f"Tidak ada attack list TCARE {label_mode} untuk {bulan_label}" +
+                            (f" SA {sa}" if sa else "") + ".")
+
+                label = f" SA {sa}" if sa else ""
+                return (f"Attack list TCARE {label_mode} {bulan_label}{label} "
+                        f"- {len(df)} unit:")
+        except ImportError:
+            pass  # modul belum ada di environment ini, lanjut ke routing lain
+
         if need_report(pertanyaan):
             result = await loop.run_in_executor(None, handle_laporan, pertanyaan)
-
-        elif need_claude(pertanyaan):
-            q = re.sub(r'^claude[,\s]+', '', pertanyaan, flags=re.IGNORECASE).strip()
-            from ai.investigator import run_auto
-            result = await loop.run_in_executor(
-                None, lambda: run_auto(q, debug=debug)
-            )
-
-        elif need_analysis(pertanyaan):
-            from ai.investigator import run_auto
-            result = await loop.run_in_executor(
-                None, lambda: run_auto(pertanyaan, debug=debug)
-            )
+            return result  # dict {"laporan": True, "filepath": ...} atau {"error": ...}
 
         else:
+            # Qwen (default) dan Claude fast ('claude, ...') sama-sama lewat sql_agent
+            # sql_agent.run() sendiri yang deteksi prefix 'claude,'
+            # Catatan: mode analisa/investigasi TIDAK tersedia di app.py — hanya via main.py
             result = await loop.run_in_executor(
                 None, run_sql_agent, pertanyaan, session_id, debug
             )
@@ -323,6 +421,17 @@ async def chat(request: Request):
             "session_id": session_id,
         })
 
+    # Laporan HTML mode
+    if isinstance(result, dict) and result.get("laporan"):
+        return JSONResponse({
+            "laporan": True,
+            "filepath": result["filepath"],
+        })
+
+    # Error dari handle_laporan
+    if isinstance(result, dict) and result.get("error"):
+        return JSONResponse({"response": result["error"]})
+
     # SAWA ZIP mode
     if isinstance(result, dict) and result.get("sawa_zip"):
         return JSONResponse({
@@ -331,7 +440,26 @@ async def chat(request: Request):
             "count": result["count"],
         })
 
-    return JSONResponse({"response": result or "(Tidak ada output)"})
+    # Sertakan table_data kalau ada _last_result untuk session ini
+    df = get_last_result(session_id)
+    table_data = None
+    if not df.empty and len(df) > 1:
+        # Kirim sebagai list of dicts, max 500 baris untuk performa
+        table_data = {
+            "columns": list(df.columns),
+            "rows": df.head(500).fillna("").astype(str).values.tolist()
+        }
+
+    return JSONResponse({
+        "response": result or "(Tidak ada output)",
+        "table_data": table_data,
+    })
+
+
+@app.get("/sawa-progress")
+async def sawa_progress(session_id: str):
+    """Polling endpoint — browser tanya progress download SAWA tiap beberapa detik."""
+    return JSONResponse(get_sawa_progress(session_id))
 
 
 @app.get("/download-excel")
@@ -393,505 +521,41 @@ async def download_sawa_zip(vins: str = ""):
     )
 
 
+@app.get("/download-laporan")
+async def download_laporan(filepath: str):
+    """
+    Stream file laporan HTML dari server ke browser sebagai download.
+    filepath dikirim oleh handle_laporan(), divalidasi harus di dalam folder Output.
+    """
+    from pathlib import Path
+
+    OUTPUT_ROOT = Path(r"D:\AI_nasmoco\Output").resolve()
+    target = Path(filepath).resolve()
+
+    # Validasi: file harus ada di dalam folder Output (cegah path traversal)
+    try:
+        target.relative_to(OUTPUT_ROOT)
+    except ValueError:
+        return JSONResponse({"error": "Path tidak valid"}, status_code=403)
+
+    if not target.exists():
+        return JSONResponse({"error": "File laporan tidak ditemukan"}, status_code=404)
+
+    content = target.read_bytes()
+
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="text/html",
+        headers={"Content-Disposition": f'attachment; filename="{target.name}"'},
+    )
+
+
 # ════════════════════════════════════════
-# CHAT UI HTML
+# CHAT UI HTML — load dari file terpisah
 # ════════════════════════════════════════
 
-CHAT_HTML = """<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nasmoco AI</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3350;
-    --accent: #e8003d;
-    --accent2: #ff6b35;
-    --text: #e8eaf0;
-    --text2: #8890aa;
-    --user-bubble: #1e3a5f;
-    --ai-bubble: #1a1d27;
-    --mono: 'Courier New', monospace;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* ── Header ── */
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-  }
-
-  .logo {
-    width: 32px; height: 32px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 14px; color: white;
-    flex-shrink: 0;
-  }
-
-  header h1 {
-    font-size: 15px; font-weight: 700;
-    letter-spacing: 0.5px;
-  }
-
-  header span {
-    font-size: 11px; color: var(--text2);
-    display: block; margin-top: 1px;
-  }
-
-  .status-dot {
-    width: 7px; height: 7px;
-    background: #22c55e;
-    border-radius: 50%;
-    margin-left: auto;
-    flex-shrink: 0;
-    box-shadow: 0 0 6px #22c55e88;
-  }
-
-  /* ── Chat area ── */
-  #chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    scroll-behavior: smooth;
-  }
-
-  /* scrollbar */
-  #chat::-webkit-scrollbar { width: 4px; }
-  #chat::-webkit-scrollbar-track { background: transparent; }
-  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .msg {
-    display: flex;
-    flex-direction: column;
-    max-width: 88%;
-    animation: fadeIn 0.18s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .msg.user { align-self: flex-end; align-items: flex-end; }
-  .msg.ai   { align-self: flex-start; align-items: flex-start; }
-
-  .bubble {
-    padding: 10px 14px;
-    border-radius: 14px;
-    font-size: 14px;
-    line-height: 1.55;
-    word-break: break-word;
-    white-space: pre-wrap;
-  }
-
-  .msg.user .bubble {
-    background: var(--user-bubble);
-    border-bottom-right-radius: 4px;
-    color: #d8e8ff;
-  }
-
-  .msg.ai .bubble {
-    background: var(--ai-bubble);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-    font-family: var(--mono);
-    font-size: 13px;
-  }
-
-  /* Highlight angka di response AI */
-  .msg.ai .bubble .num { color: #7dd3fc; font-weight: 600; }
-
-  .msg-time {
-    font-size: 10px;
-    color: var(--text2);
-    margin-top: 4px;
-    padding: 0 4px;
-  }
-
-  /* Typing indicator */
-  .typing { display: flex; gap: 4px; padding: 12px 14px; }
-  .typing span {
-    width: 7px; height: 7px;
-    background: var(--text2);
-    border-radius: 50%;
-    animation: bounce 1.2s infinite;
-  }
-  .typing span:nth-child(2) { animation-delay: .2s; }
-  .typing span:nth-child(3) { animation-delay: .4s; }
-  @keyframes bounce {
-    0%,60%,100% { transform: translateY(0); }
-    30%          { transform: translateY(-6px); }
-  }
-
-  /* ── Quick commands ── */
-  #quick-cmds {
-    display: flex;
-    gap: 6px;
-    padding: 8px 16px 0;
-    overflow-x: auto;
-    flex-shrink: 0;
-  }
-  #quick-cmds::-webkit-scrollbar { display: none; }
-
-  .qcmd {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 12px;
-    color: var(--text2);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .qcmd:hover, .qcmd:active {
-    background: var(--border);
-    color: var(--text);
-  }
-
-  /* ── Input area ── */
-  #input-area {
-    padding: 10px 12px 14px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 8px;
-    align-items: flex-end;
-    flex-shrink: 0;
-  }
-
-  #input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: var(--text);
-    font-family: var(--font);
-    resize: none;
-    outline: none;
-    max-height: 120px;
-    line-height: 1.4;
-    transition: border-color 0.15s;
-  }
-  #input:focus { border-color: var(--accent); }
-  #input::placeholder { color: var(--text2); }
-
-  #send-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    width: 40px; height: 40px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    transition: background 0.15s, transform 0.1s;
-  }
-  #send-btn:hover   { background: #c4002f; }
-  #send-btn:active  { transform: scale(0.95); }
-  #send-btn svg { width: 18px; height: 18px; fill: white; }
-
-  /* ── Intro / empty state ── */
-  #empty-state {
-    margin: auto;
-    text-align: center;
-    color: var(--text2);
-    padding: 24px;
-  }
-  #empty-state .big { font-size: 36px; margin-bottom: 8px; }
-  #empty-state p { font-size: 13px; line-height: 1.6; }
-
-  /* ── Download button ── */
-  .dl-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    padding: 7px 14px;
-    background: #16a34a;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-family: var(--font);
-    cursor: pointer;
-    text-decoration: none;
-    transition: background 0.15s;
-  }
-  .dl-btn:hover { background: #15803d; }
-  .dl-btn svg { width: 14px; height: 14px; fill: white; }
-
-  /* ── Debug badge ── */
-  #debug-toggle {
-    font-size: 11px;
-    color: var(--text2);
-    cursor: pointer;
-    padding: 2px 8px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    user-select: none;
-  }
-  #debug-toggle.on { color: var(--accent2); border-color: var(--accent2); }
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo">N</div>
-  <div>
-    <h1>Nasmoco AI</h1>
-    <span>Analyst · Tegal</span>
-  </div>
-  <span id="debug-toggle" onclick="toggleDebug()">debug off</span>
-  <div class="status-dot" title="Online"></div>
-</header>
-
-<div id="quick-cmds">
-  <div class="qcmd" onclick="useCmd(this)">Revenue bulan ini</div>
-  <div class="qcmd" onclick="useCmd(this)">CPUS bulan ini per SA</div>
-  <div class="qcmd" onclick="useCmd(this)">Ranking SA bulan ini</div>
-  <div class="qcmd" onclick="useCmd(this)">TCARE expired bulan ini</div>
-  <div class="qcmd" onclick="useCmd(this)">WIP sekarang</div>
-  <div class="qcmd" onclick="useCmd(this)">Buat laporan</div>
-</div>
-
-<div id="chat">
-  <div id="empty-state">
-    <div class="big">🔍</div>
-    <p>Tanya apa saja tentang data bengkel.<br>
-    Ketik atau pilih shortcut di atas.</p>
-  </div>
-</div>
-
-<div id="input-area">
-  <textarea id="input" rows="1" placeholder="Tanya sesuatu..." 
-    onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-  <button id="send-btn" onclick="sendMsg()">
-    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-  </button>
-</div>
-
-<script>
-  // Session ID unik per tab
-  const SESSION_ID = 'sess_' + Math.random().toString(36).slice(2, 10);
-  let debugMode = false;
-  let isLoading = false;
-
-  function toggleDebug() {
-    debugMode = !debugMode;
-    const el = document.getElementById('debug-toggle');
-    el.textContent = debugMode ? 'debug on' : 'debug off';
-    el.classList.toggle('on', debugMode);
-  }
-
-  function useCmd(el) {
-    const inp = document.getElementById('input');
-    inp.value = el.textContent;
-    autoResize(inp);
-    inp.focus();
-  }
-
-  function autoResize(ta) {
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
-  }
-
-  function handleKey(e) {
-    // Enter kirim, Shift+Enter newline
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMsg();
-    }
-  }
-
-  function now() {
-    return new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-  }
-
-  function addMsg(role, text) {
-    const chat = document.getElementById('chat');
-    const empty = document.getElementById('empty-state');
-    if (empty) empty.remove();
-
-    const div = document.createElement('div');
-    div.className = `msg ${role}`;
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-
-    if (role === 'ai') {
-      // Highlight angka
-      bubble.innerHTML = text.replace(/(\\b[\\d,]+(?:\\.\\d+)?\\b)/g, '<span class="num">$1</span>');
-    } else {
-      bubble.textContent = text;
-    }
-
-    const time = document.createElement('div');
-    time.className = 'msg-time';
-    time.textContent = now();
-
-    div.appendChild(bubble);
-    div.appendChild(time);
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-    return div;
-  }
-
-  function addTyping() {
-    const chat = document.getElementById('chat');
-    const div = document.createElement('div');
-    div.className = 'msg ai';
-    div.id = 'typing-indicator';
-    div.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function removeTyping() {
-    const t = document.getElementById('typing-indicator');
-    if (t) t.remove();
-  }
-
-  async function sendMsg() {
-    if (isLoading) return;
-    const inp = document.getElementById('input');
-    const text = inp.value.trim();
-    if (!text) return;
-
-    inp.value = '';
-    inp.style.height = 'auto';
-    addMsg('user', text);
-    addTyping();
-    isLoading = true;
-
-    try {
-      const res = await fetch('/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          session_id: SESSION_ID,
-          debug: debugMode
-        })
-      });
-      let data;
-      try {
-        data = await res.json();
-      } catch (parseErr) {
-        removeTyping();
-        addMsg('ai', '\u26a0 Server error - response bukan JSON. Cek terminal server.');
-        return;
-      }
-      removeTyping();
-
-      if (!res.ok) {
-        addMsg('ai', '\u26a0 Server error: ' + (data.detail || JSON.stringify(data)));
-      } else if (data.export) {
-        addExportMsg(data.filename, data.rows, data.session_id);
-      } else if (data.sawa_zip) {
-        addSawaMsg(data.vins, data.count);
-      } else {
-        addMsg('ai', data.response || '(Tidak ada output)');
-      }
-
-    } catch (err) {
-      removeTyping();
-      const msg = err && err.message ? err.message : String(err);
-      addMsg('ai', '\u26a0 Error: ' + msg);
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  function addSawaMsg(vins, count) {
-    const chat = document.getElementById('chat');
-    const empty = document.getElementById('empty-state');
-    if (empty) empty.remove();
-
-    const url = `/download-sawa-zip?vins=${encodeURIComponent(vins)}`;
-
-    const div = document.createElement('div');
-    div.className = 'msg ai';
-    div.innerHTML = `
-      <div class="bubble">
-        &#x2705; Sertifikat SAWA selesai didownload &mdash; <strong>${count}</strong> unit.<br>
-        <a class="dl-btn" href="${url}" download>
-          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-          Download ZIP
-        </a>
-      </div>
-      <div class="msg-time">${now()}</div>
-    `;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-
-    // Auto-trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '';
-    a.click();
-  }
-
-  function addExportMsg(filename, rows, sessionId) {
-    const chat = document.getElementById('chat');
-    const empty = document.getElementById('empty-state');
-    if (empty) empty.remove();
-
-    const url = `/download-excel?session_id=${encodeURIComponent(sessionId)}&filename=${encodeURIComponent(filename)}`;
-
-    const div = document.createElement('div');
-    div.className = 'msg ai';
-    div.innerHTML = `
-      <div class="bubble">
-        &#x2705; Siap di-download &mdash; <strong>${rows.toLocaleString('id-ID')}</strong> baris data.<br>
-        <a class="dl-btn" href="${url}" download="${filename}">
-          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-          Download Excel
-        </a>
-      </div>
-      <div class="msg-time">${now()}</div>
-    `;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-
-    // Auto-trigger download tanpa klik manual
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-  }
-</script>
-</body>
-</html>
-"""
+_HTML_FILE = Path(__file__).parent / "templates" / "chat.html"
+CHAT_HTML = _HTML_FILE.read_text(encoding="utf-8")
 
 
 # ════════════════════════════════════════
@@ -919,5 +583,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=False,
-        log_level="warning",   # kurangi noise di terminal
+        log_level="info",
     )
