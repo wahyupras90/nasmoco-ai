@@ -342,11 +342,15 @@ async def process_message(pertanyaan: str, session_id: str, debug: bool = False)
                 bulan_label = bulan or datetime.now().strftime('%Y-%m')
 
                 if count_only:
-                    total = await loop.run_in_executor(
+                    counts = await loop.run_in_executor(
                         None, lambda: fn(bulan=bulan, sa=sa, count_only=True)
                     )
                     label = f" SA {sa}" if sa else ""
-                    return f"Attack list TCARE {label_mode} {bulan_label}{label}: {total} unit"
+                    if expired_mode or counts['total_unit'] == counts['total_pekerjaan']:
+                        return (f"Attack list TCARE {label_mode} {bulan_label}{label}: "
+                                f"{counts['total_unit']} unit")
+                    return (f"Attack list TCARE {label_mode} {bulan_label}{label}: "
+                            f"{counts['total_unit']} unit ({counts['total_pekerjaan']} pekerjaan)")
 
                 df = await loop.run_in_executor(
                     None, lambda: fn(bulan=bulan, sa=sa)

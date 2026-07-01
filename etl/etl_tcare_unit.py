@@ -183,29 +183,41 @@ def load_sbe_from_mapping_cust(df_map=None) -> pd.DataFrame:
     return result
 
 
-def load_sbe_from_tcare_nasional() -> pd.DataFrame:
+def load_tcare_nasional_raw() -> pd.DataFrame:
+    """Baca 2 file T-CARE Nasional terbaru -> raw DataFrame (semua kolom).
+    Dipakai untuk sharing antar fungsi tanpa baca file berkali-kali.
+    """
+    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
+    dfs = []
+    for f in files:
+        try:
+            dfs.append(pd.read_excel(f, header=0, engine='openpyxl'))
+        except Exception:
+            pass
+    if not dfs:
+        return pd.DataFrame()
+    df = pd.concat(dfs, ignore_index=True)
+    df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
+    df = df.dropna(subset=['no_rangka'])
+    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+    return df
+
+
+def load_sbe_from_tcare_nasional(df_tc_raw=None) -> pd.DataFrame:
     """
     Ambil last SBE/SBI dari T-CARE Nasional (2 file terbaru).
     Kolom: 'Bulan 1st Service' s.d. 'Bulan 7th Service' (tanggal lengkap,
     nama kolom menyesatkan tapi isinya YYYY-MM-DD), beserta
     'Dealer Nth Service' untuk dealer.
     1st Service = SBI (1K), 2nd-7th = SBE 10K-60K.
+    df_tc_raw: opsional raw DataFrame T-CARE Nasional (skip baca file ulang).
     """
-    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
-    dfs = []
-    for f in files:
-        try:
-            df = pd.read_excel(f, header=0, engine='openpyxl')
-            dfs.append(df)
-        except Exception:
-            pass
-    if not dfs:
-        return pd.DataFrame()
-
-    df = pd.concat(dfs, ignore_index=True)
-    df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
-    df = df.dropna(subset=['no_rangka'])
-    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+    if df_tc_raw is not None and len(df_tc_raw) > 0:
+        df = df_tc_raw.copy()
+    else:
+        df = load_tcare_nasional_raw()
+        if len(df) == 0:
+            return pd.DataFrame()
 
     # Mapping ordinal service → km
     ORDINAL_TO_KM = {
@@ -244,23 +256,16 @@ def load_sbe_from_tcare_nasional() -> pd.DataFrame:
     return result[['no_rangka', 'last_sbe_km_tc', 'last_sbe_date_tc', 'last_sbe_dealer_tc']]
 
 
-def load_tcare_type_from_nasional() -> pd.DataFrame:
-    """Ambil tcare_type dari 2 file T-CARE Nasional terbaru."""
-    files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
-    dfs = []
-    for f in files:
-        try:
-            df = pd.read_excel(f, header=0, engine='openpyxl')
-            dfs.append(df)
-        except Exception:
-            pass
-    if not dfs:
-        return pd.DataFrame()
-
-    df = pd.concat(dfs, ignore_index=True)
-    df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
-    df = df.dropna(subset=['no_rangka'])
-    df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+def load_tcare_type_from_nasional(df_tc_raw=None) -> pd.DataFrame:
+    """Ambil tcare_type dari 2 file T-CARE Nasional terbaru.
+    df_tc_raw: opsional raw DataFrame T-CARE Nasional (skip baca file ulang).
+    """
+    if df_tc_raw is not None and len(df_tc_raw) > 0:
+        df = df_tc_raw.copy()
+    else:
+        df = load_tcare_nasional_raw()
+        if len(df) == 0:
+            return pd.DataFrame()
 
     return pd.DataFrame({
         'no_rangka':       df['no_rangka'],
@@ -446,16 +451,20 @@ def run(paths: dict = None, map_cache=None):
     import time
 
     t = time.time()
+    df_tc_raw = load_tcare_nasional_raw()
+    print(f"    tc_nasional_raw: {time.time()-t:.1f}s "
+          f"({len(df_tc_raw):,} unit)"); t = time.time()
+
     df_sbe_um  = load_sbe_from_unitmasuk()
     print(f"    sbe_um        : {time.time()-t:.1f}s"); t = time.time()
 
     df_sbe_map = load_sbe_from_mapping_cust(df_map=map_cache)
     print(f"    sbe_map       : {time.time()-t:.1f}s"); t = time.time()
 
-    df_sbe_tc  = load_sbe_from_tcare_nasional()
+    df_sbe_tc  = load_sbe_from_tcare_nasional(df_tc_raw=df_tc_raw)
     print(f"    sbe_tc        : {time.time()-t:.1f}s"); t = time.time()
 
-    df_tc_type = load_tcare_type_from_nasional()
+    df_tc_type = load_tcare_type_from_nasional(df_tc_raw=df_tc_raw)
     print(f"    tc_type       : {time.time()-t:.1f}s"); t = time.time()
 
     df_sa      = load_sa_terakhir()
@@ -582,23 +591,24 @@ def run(paths: dict = None, map_cache=None):
           f"({int(flag_n)} pending SBE) — {elapsed:.1f} detik")
 
     # ── Build tcare_schedule + tcare_monthly ──
-    rebuild_tcare_monthly(df_map_cache=map_cache)
+    rebuild_tcare_monthly(df_map_cache=map_cache, df_tc_raw=df_tc_raw)
 
 
 # ════════════════════════════════════════
 # REBUILD TCARE SCHEDULE + MONTHLY
 # ════════════════════════════════════════
 
-def rebuild_tcare_monthly(df_map_cache=None):
+def rebuild_tcare_monthly(df_map_cache=None, df_tc_raw=None):
     """
     Rebuild tcare_schedule dan tcare_monthly dari DB.
     Dipanggil dari run() (monthly) dan run_tcare_unit_daily() (daily).
     Realisasi digabung dari unitmasuk + Mapping Cust + T-CARE Nasional.
-    df_map_cache: opsional raw DataFrame Mapping Cust (untuk skip baca file ulang).
+    df_map_cache, df_tc_raw: opsional raw DataFrame untuk skip baca file ulang.
     """
     conn = sqlite3.connect(DB_PATH)
     try:
-        df_schedule = build_tcare_schedule(conn, df_map_cache=df_map_cache)
+        df_schedule = build_tcare_schedule(conn, df_map_cache=df_map_cache,
+                                           df_tc_raw=df_tc_raw)
         if len(df_schedule) > 0:
             df_schedule.to_sql('tcare_schedule', conn,
                                if_exists='replace', index=False)
@@ -626,7 +636,7 @@ KUNJUNGAN_LABEL = {1: '10K', 2: '20K', 3: '30K', 4: '40K', 5: '50K', 6: '60K'}
 
 
 def _build_realisasi_from_external(df_rs_do: pd.DataFrame, sumber: str,
-                                    df_map_cache=None) -> pd.DataFrame:
+                                    df_map_cache=None, df_tc_raw=None) -> pd.DataFrame:
     """
     Ekstrak realisasi TCARE (SBE 10K-60K) dari Mapping Cust atau T-CARE Nasional.
     Return format sama dengan df_real3: no_rangka, kunjungan, no_wo_real,
@@ -634,6 +644,7 @@ def _build_realisasi_from_external(df_rs_do: pd.DataFrame, sumber: str,
 
     sumber: 'cust_map' atau 'tc_nas'
     df_map_cache: opsional raw DataFrame Mapping Cust (untuk sumber='cust_map')
+    df_tc_raw: opsional raw DataFrame T-CARE Nasional (untuk sumber='tc_nas')
     """
     KM_TO_KUNJUNGAN = {10000:1, 20000:2, 30000:3, 40000:4, 50000:5, 60000:6}
 
@@ -680,19 +691,12 @@ def _build_realisasi_from_external(df_rs_do: pd.DataFrame, sumber: str,
         df_ext['sumber_tag'] = 'cust_map'
 
     elif sumber == 'tc_nas':
-        files = sorted(TCARE_NASIONAL_DIR.glob('*.xlsx'), reverse=True)[:2]
-        dfs = []
-        for f in files:
-            try:
-                dfs.append(pd.read_excel(f, header=0, engine='openpyxl'))
-            except Exception:
-                pass
-        if not dfs:
-            return pd.DataFrame()
-        df = pd.concat(dfs, ignore_index=True)
-        df['no_rangka'] = df['No Rangka'].apply(clean_no_rangka)
-        df = df.dropna(subset=['no_rangka'])
-        df = df.drop_duplicates(subset=['no_rangka'], keep='first')
+        if df_tc_raw is not None and len(df_tc_raw) > 0:
+            df = df_tc_raw.copy()
+        else:
+            df = load_tcare_nasional_raw()
+            if len(df) == 0:
+                return pd.DataFrame()
 
         # 2nd-7th Service = kunjungan 1-6 (10K-60K). 1st Service = SBI, di-skip.
         ORDINAL_TO_KUNJUNGAN = {
@@ -751,7 +755,7 @@ def _build_realisasi_from_external(df_rs_do: pd.DataFrame, sumber: str,
 
 
 def build_tcare_schedule(conn: sqlite3.Connection,
-                         df_map_cache=None) -> pd.DataFrame:
+                         df_map_cache=None, df_tc_raw=None) -> pd.DataFrame:
     """
     Generate jadwal TCARE per unit per kunjungan (6 kunjungan × unit OWN+BERKAH).
     Potensi = OWN only. BERKAH masuk tapi tidak dihitung sebagai potensi.
@@ -760,6 +764,7 @@ def build_tcare_schedule(conn: sqlite3.Connection,
 
     Realisasi digabung dari 3 sumber dengan prioritas:
     unitmasuk (TCARE lokal) > Mapping Cust (SBE 10K-60K) > T-CARE Nasional.
+    df_map_cache, df_tc_raw: opsional raw DataFrame untuk skip baca file ulang.
     """
     df_rs = pd.read_sql("""
         SELECT no_rangka, dealer_kategori, tgl_do, customer
@@ -864,7 +869,7 @@ def build_tcare_schedule(conn: sqlite3.Connection,
     if len(df_cust_map) > 0:
         df_cust_map['_priority'] = 2
 
-    df_tc_nas = _build_realisasi_from_external(df_rs_do, 'tc_nas')
+    df_tc_nas = _build_realisasi_from_external(df_rs_do, 'tc_nas', df_tc_raw=df_tc_raw)
     if len(df_tc_nas) > 0:
         df_tc_nas['_priority'] = 3
 

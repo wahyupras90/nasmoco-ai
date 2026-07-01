@@ -41,7 +41,6 @@ def create_crm_attack_list_table():
             hari_sejak_kunjungan   INTEGER,
             interval_avg_hari      REAL,
             avg_revenue_per_wo     REAL,
-            pct_wo_with_tgp        REAL,
             pct_wo_with_adt        REAL,
             pct_wo_with_sublet     REAL,
             program_id      INTEGER,
@@ -63,10 +62,11 @@ def generate_alasan(row):
         parts.append(f"{int(row['hari_sejak_kunjungan'])} hari sejak kunjungan terakhir")
     if pd.notna(row['avg_revenue_per_wo']):
         parts.append(f"avg revenue Rp{int(row['avg_revenue_per_wo']):,}")
-    if pd.notna(row['pct_wo_with_tgp']) and row['pct_wo_with_tgp'] == 0:
-        parts.append("belum pernah TGP")
-    if pd.notna(row['pct_wo_with_adt']) and row['pct_wo_with_adt'] == 0:
-        parts.append("belum pernah ADT")
+    # ADT dan sublet adalah kesatuan upselling
+    no_adt    = pd.notna(row['pct_wo_with_adt'])    and row['pct_wo_with_adt'] == 0
+    no_sublet = pd.notna(row['pct_wo_with_sublet']) and row['pct_wo_with_sublet'] == 0
+    if no_adt and no_sublet:
+        parts.append("belum bisa di-upselling")
     return ", ".join(parts)
 
 
@@ -81,7 +81,7 @@ def run():
         query = f"""
             SELECT no_rangka, customer, model, segment, segment_rfm, sa_terakhir,
                    tgl_kunjungan_terakhir, hari_sejak_kunjungan, interval_avg_hari,
-                   avg_revenue_per_wo, pct_wo_with_tgp, pct_wo_with_adt, pct_wo_with_sublet
+                   avg_revenue_per_wo, pct_wo_with_adt, pct_wo_with_sublet
             FROM customer_profile
             WHERE {prog['kondisi_sql']}
         """
@@ -101,7 +101,7 @@ def run():
     kolom = [
         'no_rangka','customer','model','segment','segment_rfm','sa_terakhir',
         'tgl_kunjungan_terakhir','hari_sejak_kunjungan','interval_avg_hari',
-        'avg_revenue_per_wo','pct_wo_with_tgp','pct_wo_with_adt','pct_wo_with_sublet',
+        'avg_revenue_per_wo','pct_wo_with_adt','pct_wo_with_sublet',
         'program_id','nama_program','alasan','status','tgl_generate','tgl_followup'
     ]
     df_final = df_final[kolom]

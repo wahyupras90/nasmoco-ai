@@ -61,6 +61,20 @@ SAWA_KEYWORDS = [
 def need_sawa(text: str) -> bool:
     return any(w in text.lower() for w in SAWA_KEYWORDS)
 
+CLAUDE_PREFIXES = ('claude,', 'claude ')
+
+def need_claude(text: str) -> bool:
+    """Pertanyaan dimulai dengan 'claude,' atau 'claude ' → pakai Claude."""
+    return text.lower().strip().startswith(CLAUDE_PREFIXES)
+
+def strip_claude_prefix(text: str) -> str:
+    """Hapus prefix 'claude,' atau 'claude ' dari pertanyaan."""
+    t = text.strip()
+    for prefix in CLAUDE_PREFIXES:
+        if t.lower().startswith(prefix):
+            return t[len(prefix):].strip()
+    return t
+
 OUTLET_KEYWORDS = [
     "outlet", "dealer", "nasmoco",
     "bengkel", "workshop", "cabang",
@@ -190,11 +204,15 @@ def validate_sql(sql: str, pertanyaan: str) -> str | None:
     is_tcare = any(k in tanya_lower for k in [
         "tcare", "expired", "expiry", "habis tcare", "batas tcare"
     ])
-    has_tcare_tables = (bool(re.search(r'\bRS\b', sql_upper)) or
-                        "UNITMASUK" in sql_upper or
-                        "REKAPBULANAN" in sql_upper or
-                        "UNIT_TCARE" in sql_upper or
-                        "TCARE_UNIT" in sql_upper)
+    has_tcare_tables = (
+        bool(re.search(r'\bRS\b', sql_upper)) or
+        "UNITMASUK" in sql_upper or
+        "REKAPBULANAN" in sql_upper or
+        "UNIT_TCARE" in sql_upper or
+        "TCARE_UNIT" in sql_upper or
+        "TCARE_SCHEDULE" in sql_upper or
+        "TCARE_MONTHLY" in sql_upper
+    )
     if is_tcare and not has_tcare_tables:
         print("⚠ WARNING: pertanyaan TCARE tapi tidak ada tabel yang relevan.")
 
@@ -342,23 +360,17 @@ def export_excel(df: pd.DataFrame,
 # ════════════════════════════════════════
 
 TCARE_KEYWORDS = ['tcare', 'batas_tcare', 'sbe terakhir',
-                  'habis tcare', 'expired tcare', 'sisa tcare']
+                  'habis tcare', 'expired tcare', 'sisa tcare',
+                  'attack list', 'pending tcare', 'jadwal tcare',
+                  'potensi tcare', 'realisasi tcare', 'conversion tcare',
+                  'punctual', 'tcare_schedule', 'tcare_monthly']
 
-def build_sql_prompt(pertanyaan: str) -> list:
+def build_sql_prompt(pertanyaan: str, use_claude: bool = False) -> list:
     """
-    RAG mode (Qwen): pilih chunk sesuai pertanyaan.
+    RAG mode: pilih chunk sesuai pertanyaan.
     Fallback ke sql_prompt.txt penuh kalau rag_builder tidak ada.
-    TCARE hint tetap diinjeksi ke user message.
+    use_claude=True → mode='claude_sql', else mode='sql' (Qwen)
     """
-    tcare_hint = ""
-    if any(k in pertanyaan.lower() for k in TCARE_KEYWORDS):
-        tcare_hint = (
-            "⚠ TCARE QUERY: WAJIB gunakan FROM unit_tcare\n"
-            "JANGAN buat CTE dari unitmasuk untuk SBE/SA terakhir.\n"
-            "Contoh: SELECT no_rangka, sa_terakhir, last_sbe_km "
-            "FROM unit_tcare WHERE ...\n\n"
-        )
-
     # Pilih prompt — RAG atau full
     if USE_RAG:
         prompt_text = rag_build_prompt(pertanyaan)
@@ -366,7 +378,6 @@ def build_sql_prompt(pertanyaan: str) -> list:
         prompt_text = SQL_PROMPT
 
     user_content = (
-        f"{tcare_hint}"
         f"Pertanyaan user:\n{pertanyaan}\n\n"
         f"TUGAS:\nBuat 1 query SQL saja."
     )
@@ -404,9 +415,19 @@ def run(pertanyaan: str, debug: bool = False):
     """
     Jalankan flow SQL lengkap:
     pertanyaan → SQL → execute → [analisa] → [export]
+
+    Routing:
+    - 'claude, ...' → Claude fast (RAG, model Claude)
+    - default       → Qwen RAG
     """
-    # 0. Direct export — kalau hanya minta export tanpa query baru
     global _last_result
+
+    # Deteksi Claude prefix → strip dan set flag
+    use_claude = need_claude(pertanyaan)
+    if use_claude:
+        pertanyaan = strip_claude_prefix(pertanyaan)
+
+    # 0. Direct export
     if is_direct_export(pertanyaan):
         if not _last_result.empty:
             print(f"📊 Export hasil query sebelumnya ({len(_last_result):,} baris)...")
@@ -432,15 +453,15 @@ def run(pertanyaan: str, debug: bool = False):
         return
 
     # 1. Generate SQL
-    messages_sql = build_sql_prompt(pertanyaan)
+    messages_sql = build_sql_prompt(pertanyaan, use_claude=use_claude)
     if debug:
-        # Hitung total panjang konten untuk debug
         total_len = len("".join(str(m.get("content","")) for m in messages_sql))
-        label = "RAG" if USE_RAG else "SQL_PROMPT cached"
+        label = "RAG+Claude" if use_claude else ("RAG" if USE_RAG else "SQL_PROMPT cached")
         print(f"PROMPT LENGTH = {total_len} ({label})")
 
     t0      = datetime.now()
-    raw_sql = ask_ai(messages_sql, mode="sql")
+    mode_sql = "claude_sql" if use_claude else "sql"
+    raw_sql = ask_ai(messages_sql, mode=mode_sql)
     elapsed = (datetime.now() - t0).total_seconds()
     if debug:
         print(f"RESPON AI {elapsed:.1f} detik")
